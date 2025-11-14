@@ -1,0 +1,28 @@
+# Byte-code compilado ou cache do Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Arquivos de distribuição/pacote
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Ambientes Virtuais (ESSENCIAL)
+venv/
+.venv/
+env/
+.env/
+
+# Arquivos de segredos (NUNCA versionar)
+.env
+*.env
+
+# Arquivos de IDE (VS Code)
+.vscode/
+
+# Arquivos de sistema (Windows/Mac)
+.DS_Store
+Thumbs.db
