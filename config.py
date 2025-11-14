@@ -32,3 +32,12 @@ class Config:
 
     # Configuração para o modo Debug
     DEBUG = os.environ.get('FLASK_DEBUG', 'False').lower() in ('true', '1')
+
+    # === Credenciais OAuth (Login RF-001) ===
+    GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
+    GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
+
+    # === Credenciais de Serviço (Firestore RF-002) ===
+    # O SDK do Google usa esta variável de ambiente automaticamente
+    # Nós apenas a definimos no .env, não precisamos carregar no config.py
+    # GOOGLE_APPLICATION_CREDENTIALS = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS')

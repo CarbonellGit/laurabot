@@ -34,7 +34,11 @@ def create_app(config_class=Config):
     # (Descomentaremos e registraremos quando criarmos os módulos)
     # from .auth import auth_bp
     # app.register_blueprint(auth_bp, url_prefix='/auth')
-    #
+
+    # REGISTRA O MÓDULO DE AUTENTICAÇÃO
+    from .auth import auth_bp
+    app.register_blueprint(auth_bp, url_prefix='/') # Usamos '/' como prefixo
+    
     # from .admin import admin_bp
     # app.register_blueprint(admin_bp, url_prefix='/admin')
     #
