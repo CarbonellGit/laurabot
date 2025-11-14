@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 
 # Carrega as variáveis de ambiente do arquivo .env (se existir)
 load_dotenv()
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'  # Permite OAuth em HTTP (apenas para desenvolvimento)  
 
 class Config:
     """

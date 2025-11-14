@@ -3,22 +3,21 @@
 {% block title %}Login - LauraBot{% endblock %}
 
 {% block head_styles %}
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
 {% endblock %}
 
 
 {% block content %}
 <div class="login-container">
     <div class="login-box">
-        <img src="{{ url_for('static', filename='images/logo.png') }}" 
-             alt="Logo do Colégio" 
-             class="login-logo">
-        
+        <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo do Colégio" class="login-logo">
+
         <h1 class="login-title">LauraBot</h1>
         <p class="login-subtitle">Acesso exclusivo para pais e responsáveis.</p>
-        
-        <a href="#" class="google-login-button">
+
+        <a href="{{ url_for('auth_bp.google_login') }}" class="google-login-button">
+
             <span class="material-icons google-icon">
                 login
             </span>
