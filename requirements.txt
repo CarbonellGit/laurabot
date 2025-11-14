@@ -1,0 +1,11 @@
+# Framework Web
+Flask
+
+# Para carregar variáveis de ambiente (segredos)
+python-dotenv
+
+# SDK do Google Cloud (para Firestore RF-002 e App Engine RNF)
+google-cloud-firestore
+google-cloud-storage 
+
+# (Vamos adicionar o Vector DB e o Gemini mais tarde)
