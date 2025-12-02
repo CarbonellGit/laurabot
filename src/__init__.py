@@ -1,52 +1,62 @@
 """
 Módulo Principal da Aplicação (Application Factory)
-
-Este arquivo contém a função create_app(), que é o padrão "Application Factory"
-usado para inicializar e configurar a aplicação Flask.
 """
 
 from flask import Flask
 from config import Config
 
+# Importa a instância do nosso novo arquivo
+from .core.oauth import oauth
+
 def create_app(config_class=Config):
     """
     Cria e configura uma instância da aplicação Flask.
-
-    Args:
-        config_class (Config): A classe de configuração a ser usada. 
-                               Padrão é a classe 'Config' de config.py.
-
-    Returns:
-        Flask: A instância da aplicação Flask configurada.
     """
     
-    # Inicializa a aplicação Flask
-    # 'instance_relative_config=True' nos permite ter configs na pasta 'instance' (fora do src)
     app = Flask(__name__, 
                 instance_relative_config=True,
-                static_folder='static',        # Define a pasta de assets estáticos
-                template_folder='templates')   # Define a pasta de templates HTML
+                static_folder='static',
+                template_folder='templates')
 
-    # 1. Carrega a configuração a partir do objeto (config.py)
+    # 1. Carrega a configuração (config.py)
     app.config.from_object(config_class)
 
-    # 2. Configura os Blueprints (Módulos)
-    # (Descomentaremos e registraremos quando criarmos os módulos)
-    # from .auth import auth_bp
-    # app.register_blueprint(auth_bp, url_prefix='/auth')
-    #
-    # from .admin import admin_bp
-    # app.register_blueprint(admin_bp, url_prefix='/admin')
-    #
-    # from .chat import chat_bp
-    # app.register_blueprint(chat_bp, url_prefix='/')
+    # 2. (NOVO) INICIALIZA E CONFIGURA O AUTHLIB
+    oauth.init_app(app)
+    
+    # Pega as credenciais do config
+    google_client_id = app.config.get('GOOGLE_CLIENT_ID')
+    google_client_secret = app.config.get('GOOGLE_CLIENT_SECRET')
 
-    # 3. Adiciona uma rota de "Health Check" (Verificação de Saúde)
-    # Isso nos ajuda a verificar se o servidor está no ar.
+    if google_client_id and google_client_secret:
+        # Registra o cliente 'google' (exatamente como no seu app.py de exemplo)
+        oauth.register(
+            name='google',
+            client_id=google_client_id,
+            client_secret=google_client_secret,
+            # Esta URL mágica busca todas as outras (auth_uri, token_uri)
+            server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+            client_kwargs={
+                # 'scope' define o que queremos (email e nome)
+                'scope': 'openid email profile'
+            }
+        )
+    else:
+        print("AVISO: GOOGLE_CLIENT_ID ou GOOGLE_CLIENT_SECRET não definidos no .env")
+
+
+    # 3. Configura os Blueprints (Módulos)
+    from .auth import auth_bp
+    app.register_blueprint(auth_bp, url_prefix='/')
+
+    from .chat import chat_bp
+    app.register_blueprint(chat_bp, url_prefix='/')
+    
+    # (admin_bp... etc)
+
+    # 4. Rota de Health Check
     @app.route("/health")
     def health_check():
-        """Rota simples para verificar se a API está online."""
         return "Servidor LauraBot no ar!", 200
 
-    # Retorna a aplicação criada
     return app

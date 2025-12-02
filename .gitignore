@@ -26,3 +26,6 @@ env/
 # Arquivos de sistema (Windows/Mac)
 .DS_Store
 Thumbs.db
+
+# Ignorar chaves de serviço do Google
+gcp-service-account.json

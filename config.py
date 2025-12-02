@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 
 # Carrega as variáveis de ambiente do arquivo .env (se existir)
 load_dotenv()
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'  # Permite OAuth em HTTP (apenas para desenvolvimento)  
 
 class Config:
     """
@@ -32,3 +33,12 @@ class Config:
 
     # Configuração para o modo Debug
     DEBUG = os.environ.get('FLASK_DEBUG', 'False').lower() in ('true', '1')
+
+    # === Credenciais OAuth (Login RF-001) ===
+    GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
+    GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
+
+    # === Credenciais de Serviço (Firestore RF-002) ===
+    # O SDK do Google usa esta variável de ambiente automaticamente
+    # Nós apenas a definimos no .env, não precisamos carregar no config.py
+    # GOOGLE_APPLICATION_CREDENTIALS = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS')
