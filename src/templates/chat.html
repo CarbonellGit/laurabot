@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Chat - LauraBot{% endblock %}
+
+{% block head_styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/chat.css') }}">
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+{% endblock %}
+
+{% block content %}
+<div class="chat-layout">
+    <header class="chat-header">
+        <h2>
+            <span class="material-icons">smart_toy</span>
+            LauraBot
+            <span class="status-indicator" title="Online"></span>
+        </h2>
+        
+        <a href="{{ url_for('auth_bp.logout') }}" style="color: rgba(255,255,255,0.8); text-decoration: none; font-size: 0.9rem;">
+            Sair
+        </a>
+    </header>
+
+    <div id="chat-history" class="chat-history">
+        <div class="message message-bot">
+            {{ mensagem_inicial }}
+        </div>
+    </div>
+
+    <div id="typing-indicator" class="typing-indicator">LauraBot está digitando...</div>
+
+    <div class="input-area">
+        <input type="text" id="user-input" class="chat-input" placeholder="Digite sua dúvida aqui..." autocomplete="off">
+        <button id="btn-send" class="btn-send">
+            <span class="material-icons">send</span>
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+{% endblock %}
