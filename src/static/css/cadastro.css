@@ -1,0 +1,192 @@
+/* Layout Principal */
+.cadastro-container {
+    min-height: 100vh;
+    background-color: var(--fundo-claro);
+    display: flex;
+    justify-content: center;
+    padding: 40px 20px;
+}
+
+.cadastro-card {
+    width: 100%;
+    max-width: 800px;
+    background: transparent;
+}
+
+/* Header */
+.cadastro-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.cadastro-title {
+    color: var(--carbonell-azul-escuro);
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.cadastro-subtitle {
+    color: var(--texto-corpo);
+    margin-top: 0.5rem;
+}
+
+/* Cards de Estudante */
+.estudante-card {
+    background: var(--carbonell-branco);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    border: 1px solid var(--borda-suave);
+    transition: transform 0.2s ease;
+    animation: slideIn 0.3s ease-out forwards;
+}
+
+.estudante-card:hover {
+    box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+}
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.estudante-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--borda-suave);
+    padding-bottom: 0.5rem;
+}
+
+.estudante-card-header h3 {
+    color: var(--carbonell-azul-marinho);
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+/* Grid do Formulário */
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1.5rem;
+}
+
+.span-full {
+    grid-column: span 3;
+}
+
+/* Inputs e Labels */
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--carbonell-azul-escuro);
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--borda-suave);
+    border-radius: 6px;
+    font-size: 1rem;
+    color: var(--texto-corpo);
+    background-color: #fff;
+    transition: border-color 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    border-color: var(--carbonell-azul-escuro);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(43, 58, 108, 0.1);
+}
+
+.input-help {
+    display: block;
+    font-size: 0.75rem;
+    color: #888;
+    margin-top: 4px;
+}
+
+/* Botões */
+.btn-remove {
+    background: none;
+    border: none;
+    color: var(--cor-erro);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.btn-remove:hover {
+    background-color: #ffeaea;
+}
+
+.actions-row {
+    text-align: center;
+    margin: 2rem 0;
+}
+
+.btn-outline {
+    background: transparent;
+    border: 2px dashed var(--carbonell-azul-escuro);
+    color: var(--carbonell-azul-escuro);
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s;
+}
+
+.btn-outline:hover {
+    background-color: rgba(43, 58, 108, 0.05);
+}
+
+.form-footer {
+    text-align: right;
+    margin-top: 2rem;
+}
+
+.btn-primary {
+    background-color: var(--carbonell-azul-escuro);
+    color: #fff;
+    border: none;
+    padding: 1rem 2rem;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    transition: background 0.2s;
+}
+
+.btn-primary:hover {
+    background-color: var(--carbonell-azul-marinho);
+    transform: translateY(-1px);
+}
+
+@media (max-width: 768px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+    .span-full {
+        grid-column: span 1;
+    }
+    .form-footer {
+        text-align: center;
+    }
+    .btn-primary {
+        width: 100%;
+        justify-content: center;
+    }
+}
