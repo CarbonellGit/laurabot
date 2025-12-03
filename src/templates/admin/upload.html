@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}Upload de Comunicado - Admin{% endblock %}
+
+{% block head_styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    
+    <div style="margin-bottom: 1rem;">
+        <a href="{{ url_for('admin_bp.dashboard') }}" style="text-decoration: none; color: var(--carbonell-azul-escuro); display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 600;">
+            <span class="material-icons">arrow_back</span> Voltar ao Dashboard
+        </a>
+    </div>
+
+    <div class="admin-card">
+        <header class="admin-header">
+            <h2>Novo Comunicado</h2>
+            <p style="opacity: 0.9;">Envie o PDF e defina quem deve recebê-lo.</p>
+        </header>
+
+        <form action="{{ url_for('admin_bp.upload_arquivo') }}" method="POST" enctype="multipart/form-data" class="admin-content">
+            
+            <div id="drop-zone" class="upload-zone">
+                <span class="material-icons upload-icon">cloud_upload</span>
+                <h3 class="upload-text">Arraste e solte o PDF aqui</h3>
+                <p class="upload-hint">ou clique para selecionar do computador</p>
+                <input type="file" name="arquivo" id="file-upload" accept="application/pdf" style="display: none;" required>
+            </div>
+
+            <div id="file-preview" class="file-selected" style="display: none;">
+                <span class="material-icons" style="color: var(--carbonell-azul-escuro); font-size: 2rem;">picture_as_pdf</span>
+                <div class="file-info">
+                    <span id="file-name-display" class="file-name">arquivo.pdf</span>
+                    <span id="file-size-display" class="file-size">0 MB</span>
+                </div>
+                <button type="button" id="btn-remove-file" class="btn-remove" title="Remover arquivo">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+
+            <div class="metadata-section">
+                <h3 class="section-title">
+                    <span class="material-icons">group</span>
+                    Público Alvo (Quem deve ler?)
+                </h3>
+
+                <p style="margin-bottom: 0.5rem; font-size: 0.9rem; font-weight: 600;">Selecione o Segmento:</p>
+                <div class="segment-grid">
+                    
+                    <div class="checkbox-card">
+                        <input type="radio" name="segmento" id="seg-todos" value="TODOS" required>
+                        <label class="checkbox-label" for="seg-todos">
+                            TODOS
+                            <span class="checkbox-sublabel">Escola inteira</span>
+                        </label>
+                    </div>
+
+                    <div class="checkbox-card">
+                        <input type="radio" name="segmento" id="seg-ei" value="EI">
+                        <label class="checkbox-label" for="seg-ei">
+                            EI
+                            <span class="checkbox-sublabel">Ed. Infantil</span>
+                        </label>
+                    </div>
+
+                    <div class="checkbox-card">
+                        <input type="radio" name="segmento" id="seg-ai" value="AI">
+                        <label class="checkbox-label" for="seg-ai">
+                            AI
+                            <span class="checkbox-sublabel">Anos Iniciais</span>
+                        </label>
+                    </div>
+
+                    <div class="checkbox-card">
+                        <input type="radio" name="segmento" id="seg-af" value="AF">
+                        <label class="checkbox-label" for="seg-af">
+                            AF
+                            <span class="checkbox-sublabel">Anos Finais</span>
+                        </label>
+                    </div>
+
+                    <div class="checkbox-card">
+                        <input type="radio" name="segmento" id="seg-em" value="EM">
+                        <label class="checkbox-label" for="seg-em">
+                            EM
+                            <span class="checkbox-sublabel">Ensino Médio</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div id="container-series" style="display: none; animation: slideDown 0.3s ease;">
+                    <p style="margin-bottom: 0.5rem; font-size: 0.9rem; font-weight: 600;">Selecione as Séries (Opcional):</p>
+                    <div id="lista-series" class="segment-grid" style="grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));">
+                        </div>
+                </div>
+            </div>
+
+            <div style="text-align: right; margin-top: 2rem;">
+                <button type="submit" class="btn-primary">
+                    Enviar Comunicado
+                    <span class="material-icons">send</span>
+                </button>
+            </div>
+
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+{% endblock %}

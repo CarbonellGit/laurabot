@@ -5,7 +5,7 @@ Módulo Principal da Aplicação (Application Factory)
 from flask import Flask
 from config import Config
 
-# Importa a instância do nosso novo arquivo
+# Importa a instância do oauth
 from .core.oauth import oauth
 
 def create_app(config_class=Config):
@@ -18,41 +18,43 @@ def create_app(config_class=Config):
                 static_folder='static',
                 template_folder='templates')
 
-    # 1. Carrega a configuração (config.py)
+    # 1. Carrega a configuração
     app.config.from_object(config_class)
 
-    # 2. (NOVO) INICIALIZA E CONFIGURA O AUTHLIB
+    # 2. Inicializa o Authlib
     oauth.init_app(app)
     
-    # Pega as credenciais do config
     google_client_id = app.config.get('GOOGLE_CLIENT_ID')
     google_client_secret = app.config.get('GOOGLE_CLIENT_SECRET')
 
     if google_client_id and google_client_secret:
-        # Registra o cliente 'google' (exatamente como no seu app.py de exemplo)
         oauth.register(
             name='google',
             client_id=google_client_id,
             client_secret=google_client_secret,
-            # Esta URL mágica busca todas as outras (auth_uri, token_uri)
             server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
             client_kwargs={
-                # 'scope' define o que queremos (email e nome)
                 'scope': 'openid email profile'
             }
         )
     else:
-        print("AVISO: GOOGLE_CLIENT_ID ou GOOGLE_CLIENT_SECRET não definidos no .env")
+        print("AVISO: GOOGLE_CLIENT_ID ou GOOGLE_CLIENT_SECRET não definidos.")
 
 
     # 3. Configura os Blueprints (Módulos)
+    
+    # Módulo de Autenticação
     from .auth import auth_bp
     app.register_blueprint(auth_bp, url_prefix='/')
 
+    # Módulo de Chat
     from .chat import chat_bp
     app.register_blueprint(chat_bp, url_prefix='/')
     
-    # (admin_bp... etc)
+    # Módulo Admin (NOVO)
+    # O url_prefix='/admin' já está definido dentro do admin/__init__.py
+    from .admin import admin_bp
+    app.register_blueprint(admin_bp)
 
     # 4. Rota de Health Check
     @app.route("/health")

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Admin - Dashboard{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-top: 2rem;">
+    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+        <h1 style="color: var(--carbonell-azul-escuro);">Área Administrativa</h1>
+        <p>Bem-vindo, <strong>{{ session['user_profile']['nome'] }}</strong>.</p>
+        
+        <hr style="margin: 2rem 0; border: 0; border-top: 1px solid #eee;">
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+            
+            <div style="border: 1px solid #eee; padding: 1.5rem; border-radius: 8px; text-align: center;">
+                <span class="material-icons" style="font-size: 3rem; color: var(--carbonell-amarelo);">cloud_upload</span>
+                <h3 style="margin: 1rem 0;">Upload de Comunicados</h3>
+                <p style="color: #666; font-size: 0.9rem; margin-bottom: 1.5rem;">
+                    Envie novos PDFs e classifique-os.
+                </p>
+                
+                <a href="{{ url_for('admin_bp.upload_form') }}" class="btn-primary" style="width: 100%;">
+                    Acessar
+                </a>
+            </div>
+
+            <div style="border: 1px solid #eee; padding: 1.5rem; border-radius: 8px; text-align: center; opacity: 0.6;">
+                <span class="material-icons" style="font-size: 3rem; color: #ccc;">library_books</span>
+                <h3 style="margin: 1rem 0;">Gerenciar Arquivos</h3>
+                <p style="color: #666; font-size: 0.9rem; margin-bottom: 1.5rem;">
+                    Visualizar e excluir comunicados.
+                </p>
+                
+                <button class="btn-primary" disabled style="width: 100%;">
+                    Em breve
+                </button>
+            </div>
+        </div>
+
+        <div style="margin-top: 2rem;">
+            <a href="{{ url_for('chat_bp.index') }}" style="text-decoration: none; color: var(--texto-corpo);">
+                ← Voltar para o Chat
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

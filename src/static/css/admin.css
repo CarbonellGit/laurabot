@@ -1,0 +1,169 @@
+/* Layout Admin */
+.admin-container {
+    max-width: 900px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+.admin-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    overflow: hidden;
+}
+
+.admin-header {
+    background-color: var(--carbonell-azul-escuro);
+    color: #fff;
+    padding: 2rem;
+    text-align: center;
+}
+
+.admin-header h2 {
+    font-size: 1.8rem;
+    margin-bottom: 0.5rem;
+    font-weight: 700;
+}
+
+.admin-content {
+    padding: 2.5rem;
+}
+
+/* Zona de Upload (Drag & Drop) */
+.upload-zone {
+    border: 3px dashed var(--borda-suave);
+    border-radius: 16px;
+    padding: 3rem 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background-color: #fafafa;
+    position: relative;
+    margin-bottom: 2rem;
+}
+
+.upload-zone:hover, .upload-zone.dragover {
+    border-color: var(--carbonell-azul-escuro);
+    background-color: rgba(43, 58, 108, 0.03);
+}
+
+.upload-icon {
+    font-size: 4rem;
+    color: var(--carbonell-amarelo);
+    margin-bottom: 1rem;
+    transition: transform 0.3s ease;
+}
+
+.upload-zone:hover .upload-icon {
+    transform: scale(1.1);
+}
+
+.upload-text {
+    font-size: 1.1rem;
+    color: var(--texto-corpo);
+    margin-bottom: 0.5rem;
+}
+
+.upload-hint {
+    font-size: 0.9rem;
+    color: #999;
+}
+
+/* Arquivo Selecionado (Feedback Visual) */
+.file-selected {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background-color: #eef2ff;
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid #d0d7de;
+    margin-bottom: 2rem;
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.file-info {
+    flex: 1;
+}
+
+.file-name {
+    font-weight: 600;
+    color: var(--carbonell-azul-escuro);
+    display: block;
+}
+
+.file-size {
+    font-size: 0.8rem;
+    color: #666;
+}
+
+/* Área de Tags (Metadados) */
+.metadata-section {
+    border-top: 1px solid var(--borda-suave);
+    padding-top: 2rem;
+}
+
+.section-title {
+    font-size: 1.1rem;
+    color: var(--carbonell-azul-escuro);
+    margin-bottom: 1.5rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Grid de Checkboxes para Segmentos */
+.segment-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.checkbox-card {
+    position: relative;
+}
+
+.checkbox-card input[type="radio"],
+.checkbox-card input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.checkbox-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    border: 1px solid var(--borda-suave);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    height: 100%;
+    text-align: center;
+    font-weight: 500;
+    color: var(--texto-corpo);
+}
+
+/* Estilos de Seleção */
+.checkbox-card input:checked + .checkbox-label {
+    border-color: var(--carbonell-azul-escuro);
+    background-color: var(--carbonell-azul-escuro);
+    color: #fff;
+    box-shadow: 0 4px 10px rgba(43, 58, 108, 0.2);
+}
+
+.checkbox-sublabel {
+    font-size: 0.75rem;
+    opacity: 0.8;
+    margin-top: 4px;
+    font-weight: 400;
+}
