@@ -155,3 +155,25 @@ def salvar_estudantes():
     except Exception as e:
         print(f"Erro ao salvar estudantes: {e}")
         return f"Erro ao salvar: {e}", 500
+    
+@auth_bp.route('/perfil')
+def perfil():
+    """
+    Exibe a tela de edição de cadastro (RF-007).
+    """
+    if 'user_profile' not in session:
+        return redirect(url_for('auth_bp.login'))
+
+    email = session['user_profile']['email']
+    
+    # Busca dados frescos do banco (importante!)
+    dados_atualizados = auth_services.obter_responsavel(email)
+    
+    if dados_atualizados:
+        # Atualiza a sessão também
+        session['user_profile'] = dados_atualizados
+        estudantes = dados_atualizados.get('filhos', [])
+    else:
+        estudantes = []
+
+    return render_template('perfil.html', estudantes=estudantes)

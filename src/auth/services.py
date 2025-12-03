@@ -50,3 +50,20 @@ def verificar_ou_criar_responsavel(google_profile: dict) -> dict:
             del dados_sessao['criado_em']
             
         return dados_sessao
+    
+def obter_responsavel(email: str) -> dict:
+    """
+    Busca os dados atualizados de um responsável pelo e-mail.
+    Útil para recarregar o perfil na tela de edição.
+    """
+    if db is None:
+        return None
+
+    doc_ref = db.collection(RESPONSAVEIS_COLLECTION).document(email)
+    doc = doc_ref.get()
+
+    if doc.exists:
+        data = doc.to_dict()
+        data['email'] = email
+        return data
+    return None  

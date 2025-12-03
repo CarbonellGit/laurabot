@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}Meu Perfil - LauraBot{% endblock %}
+
+{% block head_styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/cadastro.css') }}">
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+{% endblock %}
+
+{% block content %}
+<div class="cadastro-container">
+    <div class="cadastro-card">
+        <header class="cadastro-header">
+            <div style="text-align: left; margin-bottom: 1rem;">
+                <a href="{{ url_for('chat_bp.index') }}" style="text-decoration: none; color: var(--carbonell-azul-escuro); display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 600;">
+                    <span class="material-icons">arrow_back</span> Voltar ao Chat
+                </a>
+            </div>
+
+            <h1 class="cadastro-title">Gerenciar Estudantes</h1>
+            <p class="cadastro-subtitle">
+                Mantenha os dados atualizados para receber as informações corretas.
+            </p>
+        </header>
+
+        <form id="form-cadastro" action="{{ url_for('auth_bp.salvar_estudantes') }}" method="POST">
+            
+            <div id="lista-estudantes">
+                </div>
+
+            <div class="actions-row">
+                <button type="button" id="btn-adicionar" class="btn-outline">
+                    <span class="material-icons">add</span>
+                    Adicionar outro estudante
+                </button>
+            </div>
+
+            <div class="form-footer">
+                <button type="submit" class="btn-primary">
+                    Salvar Alterações
+                    <span class="material-icons">save</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<template id="template-estudante">
+    <div class="estudante-card" data-index="{index}">
+        <div class="estudante-card-header">
+            <h3>Estudante #<span class="numero-estudante">1</span></h3>
+            <button type="button" class="btn-remove" title="Remover estudante">
+                <span class="material-icons">delete_outline</span>
+            </button>
+        </div>
+        
+        <div class="form-grid">
+            <div class="form-group span-full">
+                <label>Nome do Estudante</label>
+                <input class="input-nome" type="text" name="estudantes[{index}][nome]" placeholder="Ex: Maria da Silva" minlength="3" pattern="[A-Za-zÀ-ÖØ-öø-ÿ\s\.]+" required>
+                <small class="input-help">Digite o nome completo.</small>
+            </div>
+
+            <div class="form-group">
+                <label>Segmento</label>
+                <div class="select-wrapper">
+                    <select name="estudantes[{index}][segmento]" class="select-segmento" required>
+                        <option value="" disabled selected>Selecione...</option>
+                        <option value="EI">Educação Infantil</option>
+                        <option value="AI">Anos Iniciais (1º ao 5º)</option>
+                        <option value="AF">Anos Finais (6º ao 9º)</option>
+                        <option value="EM">Ensino Médio</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Série/Ano</label>
+                <div class="select-wrapper">
+                    <select name="estudantes[{index}][serie]" class="select-serie" disabled required>
+                        <option value="" disabled selected>Selecione o segmento...</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Período</label>
+                <div class="select-wrapper">
+                    <select name="estudantes[{index}][periodo]" class="select-periodo" required>
+                        <option value="" disabled selected>Selecione...</option>
+                        <option value="Manhã">Manhã</option>
+                        <option value="Tarde">Tarde</option>
+                        <option value="Integral">Integral</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+
+{% endblock %}
+
+{% block scripts %}
+<script type="application/json" id="dados-estudantes-json">
+    {{ estudantes | tojson | safe }}
+</script>
+
+<script>
+    // Agora o JavaScript lê o conteúdo da tag acima e converte para Objeto
+    const elementoDados = document.getElementById('dados-estudantes-json');
+    const DADOS_ESTUDANTES = JSON.parse(elementoDados.textContent);
+</script>
+
+<script src="{{ url_for('static', filename='js/cadastro.js') }}"></script>
+{% endblock %}
