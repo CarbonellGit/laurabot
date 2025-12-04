@@ -16,3 +16,9 @@ google-cloud-storage
 Authlib
 
 pypdf
+
+# Banco de Dados Vetorial (RAG)
+pinecone
+
+# IA Generativa (Google Gemini)
+google-generativeai

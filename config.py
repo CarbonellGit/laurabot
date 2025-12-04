@@ -30,6 +30,13 @@ class Config:
 
        # O Storage busca esta variável aqui, que por sua vez busca no .env
     GCS_BUCKET_NAME = os.environ.get('GCS_BUCKET_NAME')
+
+    # === NOVAS CONFIGS ===
+    PINECONE_API_KEY = os.environ.get('PINECONE_API_KEY')
+    GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY')
+    
+    # Nome do índice que vamos criar no Pinecone
+    PINECONE_INDEX_NAME = 'laurabot-comunicados'
     
     # (Adicionaremos mais configurações aqui conforme necessário, 
     # como as credenciais do Firestore)

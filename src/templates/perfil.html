@@ -12,7 +12,8 @@
     <div class="cadastro-card">
         <header class="cadastro-header">
             <div style="text-align: left; margin-bottom: 1rem;">
-                <a href="{{ url_for('chat_bp.index') }}" style="text-decoration: none; color: var(--carbonell-azul-escuro); display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 600;">
+                <a href="{{ url_for('chat_bp.index') }}"
+                    style="text-decoration: none; color: var(--carbonell-azul-escuro); display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 600;">
                     <span class="material-icons">arrow_back</span> Voltar ao Chat
                 </a>
             </div>
@@ -24,9 +25,9 @@
         </header>
 
         <form id="form-cadastro" action="{{ url_for('auth_bp.salvar_estudantes') }}" method="POST">
-            
+
             <div id="lista-estudantes">
-                </div>
+            </div>
 
             <div class="actions-row">
                 <button type="button" id="btn-adicionar" class="btn-outline">
@@ -53,11 +54,12 @@
                 <span class="material-icons">delete_outline</span>
             </button>
         </div>
-        
+
         <div class="form-grid">
             <div class="form-group span-full">
                 <label>Nome do Estudante</label>
-                <input class="input-nome" type="text" name="estudantes[{index}][nome]" placeholder="Ex: Maria da Silva" minlength="3" pattern="[A-Za-zÀ-ÖØ-öø-ÿ\s\.]+" required>
+                <input class="input-nome" type="text" name="estudantes[{index}][nome]" placeholder="Ex: Maria da Silva"
+                    minlength="3" pattern="[A-Za-zÀ-ÖØ-öø-ÿ\s\.]+" required>
                 <small class="input-help">Digite o nome completo.</small>
             </div>
 
