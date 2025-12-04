@@ -2,9 +2,11 @@
 Rotas do Módulo Admin
 """
 import os
-# ADICIONADO: 'request' na lista de imports
 from flask import render_template, session, redirect, url_for, flash, abort, request
 from . import admin_bp
+
+# Importa o nosso novo motor de leitura (Parser)
+from src.core import parser
 
 def verificar_admin():
     """
@@ -54,29 +56,38 @@ def upload_form():
 @admin_bp.route('/upload-arquivo', methods=['POST'])
 def upload_arquivo():
     """
-    Processa o upload do arquivo e os metadados.
+    Processa o upload do arquivo, extrai texto e metadados.
     """
-    # 1. Verifica se tem arquivo na requisição
+    # 1. Verificações básicas
     if 'arquivo' not in request.files:
-        return "Erro: Nenhum arquivo enviado na requisição.", 400
+        return "Erro: Nenhum arquivo enviado.", 400
     
     arquivo = request.files['arquivo']
     
     if arquivo.filename == '':
-        return "Erro: Nenhum arquivo selecionado.", 400
+        return "Erro: Nome de arquivo vazio.", 400
 
-    # 2. Pega os metadados do formulário
-    segmento = request.form.get('segmento')
-    series = request.form.getlist('series') # getlist pega múltiplos checkboxes selecionados
+    # 2. Metadados do Form (O que o Admin selecionou manualmente)
+    segmento_form = request.form.get('segmento')
+    series_form = request.form.getlist('series')
 
-    print(f"--- UPLOAD RECEBIDO ---")
-    print(f"Arquivo: {arquivo.filename}")
-    print(f"Tipo: {arquivo.content_type}")
-    print(f"Segmento: {segmento}")
-    print(f"Séries: {series}")
-    print(f"-----------------------")
+    # 3. Processamento Inteligente (Parser)
+    print(f"--- INICIANDO PROCESSAMENTO DO PDF: {arquivo.filename} ---")
+    
+    # Extração de Texto (OCR/Leitura)
+    texto_extraido = parser.extrair_texto_pdf(arquivo)
+    
+    # Análise Automática (apenas para log por enquanto, RF-009)
+    tags_auto = parser.analisar_nome_arquivo(arquivo.filename)
 
-    # AQUI ENTRARÁ O CÓDIGO DE PROCESSAMENTO DE PDF (Próxima etapa)
+    print(f"1. Segmento Selecionado: {segmento_form}")
+    print(f"2. Tags Detectadas no Nome: {tags_auto}")
+    print(f"3. Tamanho do Texto Extraído: {len(texto_extraido)} caracteres")
+    
+    print("--- INÍCIO DO CONTEÚDO (Primeiros 500 caracteres) ---")
+    print(texto_extraido[:500])
+    print("--- FIM DA AMOSTRA ---")
 
-    # Redireciona de volta para o dashboard
+    # AQUI ENTRARÁ O BANCO VETORIAL (Próxima etapa)
+
     return redirect(url_for('admin_bp.dashboard'))
