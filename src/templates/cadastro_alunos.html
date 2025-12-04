@@ -13,14 +13,15 @@
         <header class="cadastro-header">
             <h1 class="cadastro-title">Bem-vindo(a), {{ session['user_profile']['nome'].split()[0] }}!</h1>
             <p class="cadastro-subtitle">
-                Para que eu possa ajudar melhor, preciso saber quem são os estudantes sob sua responsabilidade matriculados no colégio.
+                Para que eu possa ajudar melhor, preciso saber quem são os estudantes sob sua responsabilidade
+                matriculados no colégio.
             </p>
         </header>
 
         <form id="form-cadastro" action="{{ url_for('auth_bp.salvar_estudantes') }}" method="POST">
-            
+
             <div id="lista-estudantes">
-                </div>
+            </div>
 
             <div class="actions-row">
                 <button type="button" id="btn-adicionar" class="btn-outline">
@@ -47,19 +48,12 @@
                 <span class="material-icons">delete_outline</span>
             </button>
         </div>
-        
+
         <div class="form-grid">
             <div class="form-group span-full">
                 <label>Nome do Estudante</label>
-                <input 
-                    type="text" 
-                    name="estudantes[{index}][nome]" 
-                    placeholder="Ex: Maria da Silva" 
-                    minlength="3"
-                    pattern="[A-Za-zÀ-ÖØ-öø-ÿ\s\.]+"
-                    title="Por favor, insira apenas letras."
-                    required
-                >
+                <input type="text" name="estudantes[{index}][nome]" placeholder="Ex: Maria da Silva" minlength="3"
+                    pattern="[A-Za-zÀ-ÖØ-öø-ÿ\s\.]+" title="Por favor, insira apenas letras." required>
                 <small class="input-help">Digite o nome completo (sem números).</small>
             </div>
 
@@ -88,11 +82,16 @@
             <div class="form-group">
                 <label>Período</label>
                 <div class="select-wrapper">
-                    <select name="estudantes[{index}][periodo]" required>
+                    <select name="estudantes[{index}][periodo]" class="select-periodo" disabled required>
+                        <option value="" disabled selected>Selecione o segmento...</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Turma</label>
+                <div class="select-wrapper">
+                    <select name="estudantes[{index}][turma]" class="select-turma" disabled required>
                         <option value="" disabled selected>Selecione...</option>
-                        <option value="Manhã">Manhã</option>
-                        <option value="Tarde">Tarde</option>
-                        <option value="Integral">Integral</option>
                     </select>
                 </div>
             </div>

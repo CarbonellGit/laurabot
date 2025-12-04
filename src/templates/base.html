@@ -7,6 +7,7 @@
     <title>{% block title %}LauraBot - Comunicados{% endblock %}</title>
 
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
 
     {% block head_styles %}{% endblock %}
 </head>
@@ -17,6 +18,26 @@
     </div>
 
     <div class="app-wrapper">
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-container">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">
+                            <span class="material-icons alert-icon">
+                                {% if category == 'success' %}check_circle
+                                {% elif category == 'error' %}error
+                                {% else %}info{% endif %}
+                            </span>
+                            <span class="alert-text">{{ message }}</span>
+                            <button type="button" class="alert-close" onclick="this.parentElement.remove()">
+                                <span class="material-icons">close</span>
+                            </button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
 
         <main class="main-content">
             {% block content %}
@@ -24,7 +45,7 @@
         </main>
 
     </div>
-
+    <script src="{{ url_for('static', filename='js/dados_escola.js') }}"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     
     {% block scripts %}{% endblock %}

@@ -27,6 +27,9 @@ class Config:
 
     # Configurações do Google Cloud (do PRD)
     GOOGLE_CLOUD_PROJECT = os.environ.get('GOOGLE_CLOUD_PROJECT')
+
+       # O Storage busca esta variável aqui, que por sua vez busca no .env
+    GCS_BUCKET_NAME = os.environ.get('GCS_BUCKET_NAME')
     
     # (Adicionaremos mais configurações aqui conforme necessário, 
     # como as credenciais do Firestore)
@@ -37,6 +40,8 @@ class Config:
     # === Credenciais OAuth (Login RF-001) ===
     GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
     GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
+
+ 
 
     # === Credenciais de Serviço (Firestore RF-002) ===
     # O SDK do Google usa esta variável de ambiente automaticamente

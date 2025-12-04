@@ -124,7 +124,8 @@ def salvar_estudantes():
             'nome': nome_limpo,
             'segmento': raw_form.get(f'estudantes[{i}][segmento]'),
             'serie': raw_form.get(f'estudantes[{i}][serie]'),
-            'periodo': raw_form.get(f'estudantes[{i}][periodo]')
+            'periodo': raw_form.get(f'estudantes[{i}][periodo]'),
+            'turma': raw_form.get(f'estudantes[{i}][turma]')
         }
         estudantes_processados.append(estudante)
 

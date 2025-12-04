@@ -121,3 +121,69 @@ body {
     cursor: not-allowed;
     transform: none;
 }
+
+.flash-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 400px;
+    width: 90%;
+}
+
+.alert {
+    padding: 1rem 1.2rem;
+    border-radius: 8px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+/* Tipos de Alerta */
+.alert-success {
+    background-color: var(--cor-sucesso); /* Verde definido no :root */
+}
+
+.alert-error {
+    background-color: var(--cor-erro); /* Vermelho definido no :root */
+}
+
+.alert-info {
+    background-color: var(--carbonell-azul-escuro);
+}
+
+.alert-icon {
+    font-size: 1.4rem;
+}
+
+.alert-text {
+    flex: 1;
+    font-size: 0.95rem;
+    line-height: 1.4;
+    word-break: break-word; /* Quebra links longos */
+}
+
+.alert-close {
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.7);
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+}
+
+.alert-close:hover {
+    color: #fff;
+}

@@ -86,11 +86,16 @@
             <div class="form-group">
                 <label>Período</label>
                 <div class="select-wrapper">
-                    <select name="estudantes[{index}][periodo]" class="select-periodo" required>
+                    <select name="estudantes[{index}][periodo]" class="select-periodo" disabled required>
+                        <option value="" disabled selected>Selecione o segmento...</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Turma</label>
+                <div class="select-wrapper">
+                    <select name="estudantes[{index}][turma]" class="select-turma" disabled required>
                         <option value="" disabled selected>Selecione...</option>
-                        <option value="Manhã">Manhã</option>
-                        <option value="Tarde">Tarde</option>
-                        <option value="Integral">Integral</option>
                     </select>
                 </div>
             </div>

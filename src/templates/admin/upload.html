@@ -19,7 +19,7 @@
     <div class="admin-card">
         <header class="admin-header">
             <h2>Novo Comunicado</h2>
-            <p style="opacity: 0.9;">Envie o PDF e defina quem deve recebê-lo.</p>
+            <p style="opacity: 0.9;">Envie o PDF e defina o público alvo.</p>
         </header>
 
         <form action="{{ url_for('admin_bp.upload_arquivo') }}" method="POST" enctype="multipart/form-data" class="admin-content">
@@ -45,12 +45,11 @@
             <div class="metadata-section">
                 <h3 class="section-title">
                     <span class="material-icons">group</span>
-                    Público Alvo (Quem deve ler?)
+                    Público Alvo (Quem deve receber?)
                 </h3>
 
                 <p style="margin-bottom: 0.5rem; font-size: 0.9rem; font-weight: 600;">Selecione o Segmento:</p>
                 <div class="segment-grid">
-                    
                     <div class="checkbox-card">
                         <input type="radio" name="segmento" id="seg-todos" value="TODOS" required>
                         <label class="checkbox-label" for="seg-todos">
@@ -58,37 +57,21 @@
                             <span class="checkbox-sublabel">Escola inteira</span>
                         </label>
                     </div>
-
                     <div class="checkbox-card">
                         <input type="radio" name="segmento" id="seg-ei" value="EI">
-                        <label class="checkbox-label" for="seg-ei">
-                            EI
-                            <span class="checkbox-sublabel">Ed. Infantil</span>
-                        </label>
+                        <label class="checkbox-label" for="seg-ei">EI <span class="checkbox-sublabel">Ed. Infantil</span></label>
                     </div>
-
                     <div class="checkbox-card">
                         <input type="radio" name="segmento" id="seg-ai" value="AI">
-                        <label class="checkbox-label" for="seg-ai">
-                            AI
-                            <span class="checkbox-sublabel">Anos Iniciais</span>
-                        </label>
+                        <label class="checkbox-label" for="seg-ai">AI <span class="checkbox-sublabel">Anos Iniciais</span></label>
                     </div>
-
                     <div class="checkbox-card">
                         <input type="radio" name="segmento" id="seg-af" value="AF">
-                        <label class="checkbox-label" for="seg-af">
-                            AF
-                            <span class="checkbox-sublabel">Anos Finais</span>
-                        </label>
+                        <label class="checkbox-label" for="seg-af">AF <span class="checkbox-sublabel">Anos Finais</span></label>
                     </div>
-
                     <div class="checkbox-card">
                         <input type="radio" name="segmento" id="seg-em" value="EM">
-                        <label class="checkbox-label" for="seg-em">
-                            EM
-                            <span class="checkbox-sublabel">Ensino Médio</span>
-                        </label>
+                        <label class="checkbox-label" for="seg-em">EM <span class="checkbox-sublabel">Ensino Médio</span></label>
                     </div>
                 </div>
 
@@ -97,6 +80,47 @@
                     <div id="lista-series" class="segment-grid" style="grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));">
                         </div>
                 </div>
+
+                <div id="container-periodo" style="display: none; margin-top: 1.5rem; animation: slideDown 0.3s ease;">
+                    <p style="margin-bottom: 0.5rem; font-size: 0.9rem; font-weight: 600;">Selecione o Período:</p>
+                    <div class="segment-grid" style="grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));">
+                        <div class="checkbox-card">
+                            <input type="checkbox" name="periodo" id="per-manha" value="Manhã">
+                            <label class="checkbox-label" for="per-manha">Manhã</label>
+                        </div>
+                        <div class="checkbox-card">
+                            <input type="checkbox" name="periodo" id="per-tarde" value="Tarde">
+                            <label class="checkbox-label" for="per-tarde">Tarde</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="container-turma" style="display: none; margin-top: 1.5rem; animation: slideDown 0.3s ease;">
+                    <p style="margin-bottom: 0.5rem; font-size: 0.9rem; font-weight: 600;">Turmas Específicas (Opcional):</p>
+                    <div class="segment-grid" style="grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));">
+                        <div class="checkbox-card">
+                            <input type="checkbox" name="turma" id="turma-a" value="A">
+                            <label class="checkbox-label" for="turma-a">A</label>
+                        </div>
+                        <div class="checkbox-card">
+                            <input type="checkbox" name="turma" id="turma-b" value="B">
+                            <label class="checkbox-label" for="turma-b">B</label>
+                        </div>
+                        <div class="checkbox-card">
+                            <input type="checkbox" name="turma" id="turma-c" value="C">
+                            <label class="checkbox-label" for="turma-c">C</label>
+                        </div>
+                         <div class="checkbox-card">
+                            <input type="checkbox" name="turma" id="turma-d" value="D">
+                            <label class="checkbox-label" for="turma-d">D</label>
+                        </div>
+                    </div>
+                    <small style="color: #666; display: block; margin-top: 0.5rem;">
+                        <span class="material-icons" style="font-size: 1rem; vertical-align: middle;">info</span>
+                        Se nenhuma turma for marcada, o comunicado será enviado para <strong>todas</strong> as turmas das séries selecionadas.
+                    </small>
+                </div>
+
             </div>
 
             <div style="text-align: right; margin-top: 2rem;">
