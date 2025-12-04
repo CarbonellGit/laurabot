@@ -4,37 +4,40 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnSend = document.getElementById('btn-send');
     const typingIndicator = document.getElementById('typing-indicator');
 
-    // Função para rolar o chat para o final
     function scrollToBottom() {
         chatHistory.scrollTop = chatHistory.scrollHeight;
     }
 
-    // Função para criar balão de mensagem
+    // Função atualizada para renderizar Markdown
     function appendMessage(text, sender) {
         const div = document.createElement('div');
         div.classList.add('message');
         div.classList.add(sender === 'user' ? 'message-user' : 'message-bot');
         
-        // Permite quebra de linha
-        div.innerText = text; 
+        if (sender === 'bot') {
+            // Se for o Robô, converte Markdown -> HTML
+            // 'marked.parse' vem da biblioteca que adicionamos no base.html
+            div.innerHTML = marked.parse(text);
+        } else {
+            // Se for usuário, mantém texto puro por segurança (evita XSS)
+            div.innerText = text; 
+        }
         
         chatHistory.appendChild(div);
         scrollToBottom();
     }
 
-    // Lógica de Envio
     async function sendMessage() {
         const text = userInput.value.trim();
         if (!text) return;
 
-        // 1. Exibe a mensagem do usuário imediatamente
         appendMessage(text, 'user');
         userInput.value = '';
-        userInput.disabled = true; // Bloqueia input enquanto processa
+        userInput.disabled = true; 
         typingIndicator.style.display = 'block';
+        scrollToBottom();
 
         try {
-            // 2. Envia para o Backend (Python)
             const response = await fetch('/enviar', {
                 method: 'POST',
                 headers: {
@@ -45,7 +48,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const data = await response.json();
 
-            // 3. Exibe a resposta do Bot
             typingIndicator.style.display = 'none';
             appendMessage(data.response, 'bot');
 
@@ -60,7 +62,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Event Listeners
     btnSend.addEventListener('click', sendMessage);
 
     userInput.addEventListener('keypress', (e) => {
@@ -69,6 +70,5 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
-    // Foco inicial
     userInput.focus();
 });

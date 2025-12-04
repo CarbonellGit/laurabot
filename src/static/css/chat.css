@@ -157,3 +157,41 @@
         border-radius: 0;
     }
 }
+
+/* === Estilização do Conteúdo Markdown (Bot) === */
+
+/* Remove margens extras dos parágrafos gerados */
+.message-bot p {
+    margin-bottom: 0.8rem;
+}
+.message-bot p:last-child {
+    margin-bottom: 0;
+}
+
+/* Listas (Bolinhas) */
+.message-bot ul, .message-bot ol {
+    margin-left: 1.5rem;
+    margin-bottom: 0.8rem;
+}
+
+.message-bot li {
+    margin-bottom: 0.3rem;
+}
+
+/* Negrito (Datas e Pontos Importantes) */
+.message-bot strong {
+    color: var(--carbonell-azul-escuro);
+    font-weight: 700;
+}
+
+/* Links (Fontes e Downloads) */
+.message-bot a {
+    color: var(--carbonell-azul-escuro);
+    text-decoration: underline;
+    font-weight: 600;
+    word-break: break-all; /* Quebra links longos se necessário */
+}
+
+.message-bot a:hover {
+    color: var(--carbonell-amarelo);
+}
