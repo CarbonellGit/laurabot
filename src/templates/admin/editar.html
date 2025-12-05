@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Comunicado - Admin{% endblock %}
+
+{% block head_styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    
+    <div style="margin-bottom: 1rem;">
+        <a href="{{ url_for('admin_bp.gerenciar_arquivos') }}" style="text-decoration: none; color: var(--carbonell-azul-escuro); display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 600;">
+            <span class="material-icons">arrow_back</span> Voltar
+        </a>
+    </div>
+
+    <div class="admin-card">
+        <header class="admin-header">
+            <h2>Editar Metadados</h2>
+            <p style="opacity: 0.9;">{{ arquivo.nome_arquivo }}</p>
+        </header>
+
+        <form action="{{ url_for('admin_bp.editar_arquivo', doc_id=doc_id) }}" method="POST" class="admin-content">
+            
+            <div class="metadata-section" style="border-top: none; padding-top: 0;">
+                <h3 class="section-title">
+                    <span class="material-icons">group</span>
+                    Público Alvo
+                </h3>
+
+                <p style="margin-bottom: 0.5rem; font-size: 0.9rem; font-weight: 600;">Segmento:</p>
+                <div class="segment-grid">
+                    {% for seg in ['TODOS', 'EI', 'AI', 'AF', 'EM'] %}
+                    <div class="checkbox-card">
+                        <input type="radio" name="segmento" id="seg-{{ seg }}" value="{{ seg }}" 
+                               {% if arquivo.segmento == seg %}checked{% endif %} required>
+                        <label class="checkbox-label" for="seg-{{ seg }}">
+                            {{ seg }}
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div id="container-series" style="display: none;">
+                    <p style="margin-bottom: 0.5rem; font-size: 0.9rem; font-weight: 600;">Séries:</p>
+                    <div id="lista-series" class="segment-grid" style="grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));">
+                        </div>
+                </div>
+
+                <div id="container-periodo" style="display: none; margin-top: 1.5rem;">
+                    <p style="margin-bottom: 0.5rem; font-size: 0.9rem; font-weight: 600;">Período:</p>
+                    <div class="segment-grid" style="grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));">
+                        {% for per in ['Manhã', 'Tarde'] %}
+                        <div class="checkbox-card">
+                            <input type="checkbox" name="periodo" id="per-{{ per }}" value="{{ per }}"
+                                   {% if per in arquivo.periodos %}checked{% endif %}>
+                            <label class="checkbox-label" for="per-{{ per }}">{{ per }}</label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div id="container-turma" style="display: none; margin-top: 1.5rem;">
+                    <p style="margin-bottom: 0.5rem; font-size: 0.9rem; font-weight: 600;">Turmas Específicas:</p>
+                    <div class="segment-grid" style="grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));">
+                        {% for t in ['A', 'B', 'C', 'D'] %}
+                        <div class="checkbox-card">
+                            <input type="checkbox" name="turma" id="turma-{{ t }}" value="{{ t }}"
+                                   {% if t in arquivo.turmas %}checked{% endif %}>
+                            <label class="checkbox-label" for="turma-{{ t }}">{{ t }}</label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+            </div>
+
+            <div style="text-align: right; margin-top: 2rem;">
+                <button type="submit" class="btn-primary">
+                    Salvar Alterações
+                    <span class="material-icons">save</span>
+                </button>
+            </div>
+
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+
+<script type="application/json" id="dados-series-json">
+    {{ arquivo.series | tojson | safe }}
+</script>
+
+<script>
+    // Script Inline específico para a tela de Edição
+    document.addEventListener('DOMContentLoaded', () => {
+        
+        // 1. Recupera os dados do bloco JSON acima de forma segura
+        const elementoDados = document.getElementById('dados-series-json');
+        let seriesSalvas = [];
+        
+        try {
+            if (elementoDados && elementoDados.textContent) {
+                seriesSalvas = JSON.parse(elementoDados.textContent);
+            }
+        } catch (e) {
+            console.error("Erro ao ler dados de séries:", e);
+        }
+        
+        // 2. Lógica para marcar os checkboxes
+        // Pequeno delay para garantir que o admin.js criou os elementos dinâmicos
+        setTimeout(() => {
+            if (seriesSalvas && seriesSalvas.length > 0) {
+                seriesSalvas.forEach(serie => {
+                    // Tenta encontrar o checkbox pelo valor
+                    // O admin.js cria checkboxes com value="X"
+                    // Precisamos escapar caracteres especiais no seletor ou iterar manualmente
+                    const inputs = document.querySelectorAll('#lista-series input[type="checkbox"]');
+                    
+                    inputs.forEach(inp => {
+                        if (inp.value === serie) {
+                            inp.checked = true;
+                            // Opcional: Disparar evento de change se houver lógica atrelada
+                            inp.dispatchEvent(new Event('change'));
+                        }
+                    });
+                });
+            }
+        }, 100);
+    });
+</script>
+{% endblock %}

@@ -167,3 +167,160 @@
     margin-top: 4px;
     font-weight: 400;
 }
+
+/* === NOVA SEÇÃO: LISTAGEM DE ARQUIVOS (GERENCIAR) === */
+
+.file-list-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+.file-card {
+    background: #fff;
+    border: 1px solid var(--borda-suave);
+    border-radius: 10px;
+    padding: 1.5rem;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+}
+
+.file-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    border-color: #d0d7de;
+}
+
+.file-card-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.file-icon-box {
+    width: 48px;
+    height: 48px;
+    background-color: #ffebee; /* Vermelho bem claro para PDF */
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.file-icon {
+    color: #d32f2f; /* Vermelho PDF */
+    font-size: 1.8rem;
+}
+
+.file-details {
+    flex: 1;
+    min-width: 0; /* Fix para text-overflow funcionar no flex */
+}
+
+.file-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--carbonell-azul-escuro);
+    margin-bottom: 0.3rem;
+    
+    /* Truncar texto longo com ... */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.file-date {
+    font-size: 0.8rem;
+    color: #888;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Badges (Etiquetas) */
+.tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    flex: 1; /* Empurra o footer para baixo */
+}
+
+.tag {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: 4px;
+    font-weight: 600;
+    text-transform: uppercase;
+    background-color: #f1f3f5;
+    color: var(--texto-corpo);
+}
+
+.tag-segmento {
+    background-color: var(--carbonell-azul-escuro);
+    color: #fff;
+}
+
+.tag-serie {
+    background-color: #e3f2fd;
+    color: #1565c0;
+}
+
+.tag-turma {
+    background-color: #fff3e0;
+    color: #ef6c00;
+}
+
+/* Footer do Card (Ações) */
+.file-card-actions {
+    display: flex;
+    gap: 0.5rem;
+    border-top: 1px solid #f0f0f0;
+    padding-top: 1rem;
+}
+
+.btn-icon {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 0.6rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.2s;
+    border: none;
+}
+
+.btn-edit {
+    background-color: #f8f9fa;
+    color: var(--texto-corpo);
+}
+.btn-edit:hover { background-color: #e9ecef; }
+
+.btn-delete {
+    background-color: #fff5f5;
+    color: var(--cor-erro);
+}
+.btn-delete:hover { background-color: #ffe3e3; }
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 4rem 1rem;
+    color: #999;
+}
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.3;
+}

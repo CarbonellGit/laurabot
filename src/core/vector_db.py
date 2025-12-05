@@ -62,7 +62,7 @@ def gerar_embedding(texto: str) -> list:
         resultado = genai.embed_content(
             model="models/text-embedding-004",
             content=texto_limpo,
-            task_type="retrieval_query" # Mudamos para 'query' pois estamos buscando
+            task_type="retrieval_query" 
         )
         return resultado['embedding']
     except Exception as e:
@@ -72,9 +72,6 @@ def gerar_embedding(texto: str) -> list:
 def salvar_no_vetor(doc_id: str, texto_completo: str, metadados: dict):
     """Gera o vetor do texto e salva no Pinecone."""
     garantir_indice_existe()
-    
-    # Para salvar, usamos task_type="retrieval_document" (interno na func acima se fosse parametrizavel, 
-    # mas o modelo do Google é flexível. Para simplificar, usamos o embedding padrão).
     
     vetor = gerar_embedding(texto_completo)
     if not vetor:
@@ -98,7 +95,43 @@ def salvar_no_vetor(doc_id: str, texto_completo: str, metadados: dict):
     index.upsert(vectors=[registro])
     print(f"✅ Documento {doc_id} vetorizado e salvo no Pinecone!")
 
-# === NOVAS FUNÇÕES PARA O CHAT (RAG) ===
+def excluir_do_vetor(doc_id: str):
+    """
+    Remove um documento do índice vetorial pelo ID.
+    (Necessário para a exclusão lógica RF-012).
+    """
+    try:
+        pc = _get_pinecone_client()
+        index_name = current_app.config.get('PINECONE_INDEX_NAME', 'laurabot-comunicados')
+        index = pc.Index(index_name)
+        
+        index.delete(ids=[doc_id])
+        print(f"🗑️ Vetor {doc_id} removido do Pinecone.")
+        
+    except Exception as e:
+        print(f"Erro ao excluir vetor: {e}")
+        # Não damos raise aqui para não travar o fluxo de exclusão principal
+        pass
+
+def atualizar_metadados_vetor(doc_id: str, novos_metadados: dict):
+    """
+    Atualiza apenas os metadados de um vetor existente sem reprocessar o embedding.
+    Útil para quando o admin muda o segmento/série do comunicado.
+    """
+    try:
+        pc = _get_pinecone_client()
+        index_name = current_app.config.get('PINECONE_INDEX_NAME', 'laurabot-comunicados')
+        index = pc.Index(index_name)
+
+        # O Pinecone permite update apenas de metadados
+        index.update(id=doc_id, set_metadata=novos_metadados)
+        print(f"✅ Metadados do vetor {doc_id} atualizados.")
+
+    except Exception as e:
+        print(f"Erro ao atualizar metadados do vetor: {e}")
+        raise e
+
+# === FUNÇÕES PARA O CHAT (RAG) ===
 
 def buscar_documentos(query: str, filtro_segmentos: list = None, top_k=3) -> list:
     """
@@ -114,7 +147,6 @@ def buscar_documentos(query: str, filtro_segmentos: list = None, top_k=3) -> lis
     index = pc.Index(index_name)
 
     # Filtro de Metadados (MongoDB style)
-    # Buscamos documentos onde 'segmento' está na lista de segmentos do usuário OU é 'TODOS'
     filtro_pinecone = {}
     
     if filtro_segmentos:
@@ -134,7 +166,6 @@ def buscar_documentos(query: str, filtro_segmentos: list = None, top_k=3) -> lis
         
         docs_encontrados = []
         for match in resultados['matches']:
-            # Só aceita se a similaridade for relevante (> 0.4 é um bom chute inicial)
             if match['score'] > 0.40:
                 docs_encontrados.append({
                     'id': match['id'],
@@ -159,16 +190,13 @@ def gerar_resposta_ia(pergunta: str, contextos: list) -> str:
     if not contextos:
         return "Não encontrei nenhum comunicado oficial sobre esse assunto específico. Por favor, tente reformular a pergunta ou entre em contato com a secretaria."
 
-    # Monta o bloco de contexto para o prompt
     texto_contexto = ""
     fontes_usadas = set()
     
     for doc in contextos:
         texto_contexto += f"\n--- DOCUMENTO: {doc['fonte']} ---\n{doc['conteudo']}\n"
-        # Guarda link markdown para citar no final
         fontes_usadas.add(f"[{doc['fonte']}]({doc['link']})")
 
-    # Prompt Rigoroso (System Prompt)
     prompt_sistema = f"""
     Você é o LauraBot, assistente virtual oficial do Colégio Carbonell.
     Sua missão é responder dúvidas dos pais baseando-se EXCLUSIVAMENTE nos comunicados abaixo.
@@ -187,12 +215,11 @@ def gerar_resposta_ia(pergunta: str, contextos: list) -> str:
     """
 
     try:
-        model = genai.GenerativeModel('gemini-2.5-flash') # Modelo rápido e barato
+        model = genai.GenerativeModel('gemini-2.5-flash')
         response = model.generate_content(prompt_sistema)
         
         resposta_final = response.text
         
-        # Adiciona as fontes no final (se já não estiverem citadas)
         resposta_final += "\n\n**Fontes consultadas:**\n" + "\n".join([f"📄 {f}" for f in fontes_usadas])
         
         return resposta_final

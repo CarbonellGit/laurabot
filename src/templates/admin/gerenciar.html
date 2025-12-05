@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}Gerenciar Arquivos - Admin{% endblock %}
+
+{% block head_styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    
+    <div style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <a href="{{ url_for('admin_bp.dashboard') }}" style="text-decoration: none; color: var(--carbonell-azul-escuro); display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 600; margin-bottom: 0.5rem;">
+                <span class="material-icons">arrow_back</span> Voltar
+            </a>
+            <h1 style="color: var(--carbonell-azul-escuro); margin: 0;">Biblioteca de Comunicados</h1>
+        </div>
+        
+        <a href="{{ url_for('admin_bp.upload_form') }}" class="btn-primary" style="padding: 0.6rem 1.2rem; font-size: 0.9rem;">
+            <span class="material-icons">add</span> Novo Upload
+        </a>
+    </div>
+
+    {% if arquivos %}
+        <div class="file-list-grid">
+            {% for arquivo in arquivos %}
+            <div class="file-card">
+                <div class="file-card-header">
+                    <div class="file-icon-box">
+                        <span class="material-icons file-icon">picture_as_pdf</span>
+                    </div>
+                    <div class="file-details">
+                        <div class="file-title" title="{{ arquivo.nome_arquivo }}">
+                            {{ arquivo.nome_arquivo }}
+                        </div>
+                        <div class="file-date">
+                            <span class="material-icons" style="font-size: 14px;">calendar_today</span>
+                            {% if arquivo.criado_em %}
+                                {{ arquivo.criado_em.strftime('%d/%m/%Y') }}
+                            {% else %}
+                                Data desc.
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tags-container">
+                    <span class="tag tag-segmento">{{ arquivo.segmento }}</span>
+                    
+                    {% if arquivo.series %}
+                        {% for s in arquivo.series[:2] %}
+                            <span class="tag tag-serie">{{ s }}</span>
+                        {% endfor %}
+                        {% if arquivo.series|length > 2 %}
+                            <span class="tag tag-serie">+{{ arquivo.series|length - 2 }}</span>
+                        {% endif %}
+                    {% endif %}
+
+                    {% if arquivo.turmas %}
+                         <span class="tag tag-turma">Turmas: {{ ', '.join(arquivo.turmas) }}</span>
+                    {% endif %}
+                </div>
+
+                <div class="file-card-actions">
+                    <a href="{{ url_for('admin_bp.editar_arquivo', doc_id=arquivo.id) }}" class="btn-icon btn-edit" title="Editar Público Alvo">
+                        <span class="material-icons">edit</span> Editar
+                    </a>
+                    
+                    <a href="{{ arquivo.url_download }}" target="_blank" class="btn-icon btn-edit" title="Baixar PDF">
+                        <span class="material-icons">download</span>
+                    </a>
+
+                    <form action="{{ url_for('admin_bp.excluir_arquivo', doc_id=arquivo.id) }}" method="POST" style="flex: 1;" onsubmit="return confirm('Tem certeza que deseja excluir este comunicado? O bot deixará de usá-lo imediatamente.');">
+                        <button type="submit" class="btn-icon btn-delete" style="width: 100%;">
+                            <span class="material-icons">delete</span> Excluir
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <span class="material-icons empty-icon">folder_open</span>
+            <h3>Nenhum comunicado encontrado.</h3>
+            <p>Faça o upload do seu primeiro PDF para começar.</p>
+        </div>
+    {% endif %}
+
+</div>
+{% endblock %}
