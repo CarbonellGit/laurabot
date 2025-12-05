@@ -1,7 +1,9 @@
 """
-Rotas do Módulo Admin (Atualizado com Integral)
+Rotas do Módulo Admin
+
+Gerencia upload e gestão de comunicados com segurança baseada em Roles
+e logging estruturado para auditoria.
 """
-import os
 import unicodedata
 import re
 from flask import render_template, session, redirect, url_for, flash, abort, request
@@ -10,15 +12,30 @@ from google.cloud import firestore
 from . import admin_bp
 from src.core import parser, storage, vector_db
 from src.core.database import db 
+from src.core.logger import get_logger
+
+# Inicializa logger
+logger = get_logger(__name__)
 
 COLLECTION_COMUNICADOS = 'comunicados'
 
 def verificar_admin():
+    """
+    Verifica se o usuário logado tem a role 'admin' no seu perfil de sessão.
+    Isso substitui a verificação insegura por variáveis de ambiente.
+    """
     user_profile = session.get('user_profile')
-    if not user_profile: return False
-    admins_env = os.environ.get('ADMIN_EMAILS', '')
-    lista_admins = [e.strip() for e in admins_env.split(',')]
-    return session['user_profile']['email'] in lista_admins
+    if not user_profile: 
+        return False
+    
+    # A role deve vir do banco de dados (carregada no login)
+    # Se não tiver role definida, assume 'user' (False)
+    es_admin = user_profile.get('role') == 'admin'
+    
+    if not es_admin:
+        logger.warning(f"Acesso negado ao Admin: {user_profile.get('email')} tentou acessar.")
+    
+    return es_admin
 
 def limpar_nome_para_id(texto):
     if not texto: return ""
@@ -39,7 +56,6 @@ def dashboard():
 @admin_bp.route('/gerenciar')
 def gerenciar_arquivos():
     try:
-        # Busca comunicados
         docs_ref = db.collection(COLLECTION_COMUNICADOS).order_by('criado_em', direction=firestore.Query.DESCENDING).stream()
         arquivos = []
         for doc in docs_ref:
@@ -48,6 +64,7 @@ def gerenciar_arquivos():
             arquivos.append(dados)
         return render_template('admin/gerenciar.html', arquivos=arquivos)
     except Exception as e:
+        logger.error("Erro ao listar arquivos no dashboard.", exc_info=True)
         flash(f"Erro ao listar arquivos: {e}", "error")
         return redirect(url_for('admin_bp.dashboard'))
 
@@ -73,12 +90,13 @@ def upload_arquivo():
     periodos_form = request.form.getlist('periodo')
     turmas_form = request.form.getlist('turma')
     
-    # Campo INTEGRAL
     integral_check = request.form.get('integral')
     is_integral = True if integral_check == 'on' else False
 
+    user_email = session['user_profile']['email']
+
     try:
-        print(f"--- INICIANDO PROCESSAMENTO: {arquivo.filename} ---")
+        logger.info(f"Iniciando upload: {arquivo.filename} por {user_email}")
         
         url_publica = storage.upload_file(arquivo, arquivo.filename)
         arquivo.seek(0) 
@@ -92,11 +110,13 @@ def upload_arquivo():
             'series': series_form,     
             'periodos': periodos_form, 
             'turmas': turmas_form,
-            'integral': is_integral, # Novo campo
+            'integral': is_integral,
+            'criado_por': user_email, # Auditoria
             'criado_em': firestore.SERVER_TIMESTAMP
         }
 
         db.collection(COLLECTION_COMUNICADOS).document(doc_id).set(metadados)
+        logger.info(f"Metadados salvos no Firestore: {doc_id}")
 
         metadados_pinecone = metadados.copy()
         if 'criado_em' in metadados_pinecone: del metadados_pinecone['criado_em']
@@ -111,17 +131,21 @@ def upload_arquivo():
         return redirect(url_for('admin_bp.gerenciar_arquivos'))
 
     except Exception as e:
-        print(f"ERRO CRÍTICO NO UPLOAD: {e}")
+        logger.critical(f"Falha no processo de upload do arquivo {arquivo.filename}: {e}", exc_info=True)
         flash(f"Erro ao processar: {e}", "error")
         return redirect(url_for('admin_bp.dashboard'))
 
 @admin_bp.route('/excluir/<doc_id>', methods=['POST'])
 def excluir_arquivo(doc_id):
+    user_email = session['user_profile']['email']
     try:
+        logger.info(f"Solicitação de exclusão: {doc_id} por {user_email}")
+
         doc_ref = db.collection(COLLECTION_COMUNICADOS).document(doc_id)
         doc = doc_ref.get()
         
         if not doc.exists:
+            logger.warning(f"Tentativa de excluir arquivo inexistente: {doc_id}")
             flash("Arquivo não encontrado no registro.", "error")
             return redirect(url_for('admin_bp.gerenciar_arquivos'))
         
@@ -136,20 +160,20 @@ def excluir_arquivo(doc_id):
         return redirect(url_for('admin_bp.gerenciar_arquivos'))
 
     except Exception as e:
+        logger.error(f"Erro ao excluir {doc_id}: {e}", exc_info=True)
         flash(f"Erro ao excluir: {e}", "error")
         return redirect(url_for('admin_bp.gerenciar_arquivos'))
 
 @admin_bp.route('/editar/<doc_id>', methods=['GET', 'POST'])
 def editar_arquivo(doc_id):
-    doc_ref = db.collection(COLLECTION_COMUNICADOS).document(doc_id)
-    doc = doc_ref.get()
+    try:
+        doc_ref = db.collection(COLLECTION_COMUNICADOS).document(doc_id)
+        doc = doc_ref.get()
 
-    if not doc.exists:
-        abort(404)
+        if not doc.exists:
+            abort(404)
 
-    if request.method == 'POST':
-        try:
-            # Captura Integral na edição
+        if request.method == 'POST':
             integral_check = request.form.get('integral')
             is_integral = True if integral_check == 'on' else False
 
@@ -164,11 +188,14 @@ def editar_arquivo(doc_id):
             doc_ref.update(novos_dados)
             vector_db.atualizar_metadados_vetor(doc_id, novos_dados)
 
+            logger.info(f"Arquivo {doc_id} editado por {session['user_profile']['email']}")
             flash("Metadados atualizados com sucesso!", "success")
             return redirect(url_for('admin_bp.gerenciar_arquivos'))
-            
-        except Exception as e:
-            flash(f"Erro ao atualizar: {e}", "error")
 
-    dados = doc.to_dict()
-    return render_template('admin/editar.html', arquivo=dados, doc_id=doc_id)
+        dados = doc.to_dict()
+        return render_template('admin/editar.html', arquivo=dados, doc_id=doc_id)
+
+    except Exception as e:
+        logger.error(f"Erro na edição de {doc_id}: {e}", exc_info=True)
+        flash(f"Erro ao editar: {e}", "error")
+        return redirect(url_for('admin_bp.gerenciar_arquivos'))
