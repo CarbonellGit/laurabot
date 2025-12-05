@@ -79,59 +79,83 @@ def upload_arquivo():
         return redirect(url_for('admin_bp.upload_form'))
     
     arquivo = request.files['arquivo']
-    
     if arquivo.filename == '':
         flash("Erro: Nome de arquivo vazio.", "error")
         return redirect(url_for('admin_bp.upload_form'))
 
-    # Metadados do Form
-    segmento_form = request.form.get('segmento')
-    series_form = request.form.getlist('series')
-    periodos_form = request.form.getlist('periodo')
-    turmas_form = request.form.getlist('turma')
+    # 1. Captura dados do Form (Input manual do Admin)
+    form_segmento = request.form.get('segmento')
+    form_series = request.form.getlist('series')
+    form_periodos = request.form.getlist('periodo')
+    form_turmas = request.form.getlist('turma')
     
     integral_check = request.form.get('integral')
     is_integral = True if integral_check == 'on' else False
-
     user_email = session['user_profile']['email']
 
     try:
-        logger.info(f"Iniciando upload: {arquivo.filename} por {user_email}")
+        logger.info(f"Processando upload: {arquivo.filename}")
         
-        url_publica = storage.upload_file(arquivo, arquivo.filename)
-        arquivo.seek(0) 
+        # 2. Extração e Análise Inteligente (IA)
+        # Primeiro extraímos o texto (necessário para o parser E para o vetor)
         texto_extraido = parser.extrair_texto_pdf(arquivo)
+        
+        # Analisa metadados com Gemini
+        metadados_ia = parser.analisar_metadados_ia(texto_extraido, arquivo.filename)
+        
+        # 3. Lógica de Merge (Formulário vs IA)
+        # Prioridade: O que o Admin marcou manualmente ganha. 
+        # O que faltar, a IA completa.
+        
+        # Segmento: Se Admin marcou 'TODOS' mas IA detectou algo específico (ex: 'EI'), 
+        # podemos considerar a IA ou manter TODOS. Por segurança, mantemos a escolha do Admin se for explícita.
+        segmento_final = form_segmento if form_segmento else metadados_ia['segmento']
+        
+        # Séries: Se o Admin não marcou nenhuma série, usamos as que a IA achou
+        series_final = form_series if form_series else metadados_ia['series']
+        
+        # Assunto: Vem da IA (Admin não digita isso hoje)
+        assunto_ia = metadados_ia.get('assunto', '')
+
+        # 4. Upload para Storage
+        url_publica = storage.upload_file(arquivo, arquivo.filename)
         doc_id = limpar_nome_para_id(arquivo.filename)
 
         metadados = {
             'nome_arquivo': arquivo.filename,
             'url_download': url_publica,
-            'segmento': segmento_form,
-            'series': series_form,     
-            'periodos': periodos_form, 
-            'turmas': turmas_form,
+            'segmento': segmento_final,
+            'series': series_final,     
+            'periodos': form_periodos, 
+            'turmas': form_turmas,
             'integral': is_integral,
-            'criado_por': user_email, # Auditoria
+            'assunto': assunto_ia,     # Novo campo rico para busca
+            'criado_por': user_email,
             'criado_em': firestore.SERVER_TIMESTAMP
         }
 
+        # 5. Salva no Firestore
         db.collection(COLLECTION_COMUNICADOS).document(doc_id).set(metadados)
-        logger.info(f"Metadados salvos no Firestore: {doc_id}")
 
+        # 6. Salva no Vector DB
         metadados_pinecone = metadados.copy()
         if 'criado_em' in metadados_pinecone: del metadados_pinecone['criado_em']
+        
+        # Adiciona o Assunto no texto vetorizado para melhorar o match semântico
+        texto_para_vetor = f"Assunto: {assunto_ia}\n\n{texto_extraido}"
 
         vector_db.salvar_no_vetor(
             doc_id=doc_id,
-            texto_completo=texto_extraido,
+            texto_completo=texto_para_vetor, 
             metadados=metadados_pinecone
         )
         
-        flash(f"Upload concluído com sucesso!", "success")
+        logger.info(f"Upload finalizado. Doc ID: {doc_id} | Assunto: {assunto_ia}")
+        flash(f"Upload concluído! Classificado como: {assunto_ia}", "success")
         return redirect(url_for('admin_bp.gerenciar_arquivos'))
 
     except Exception as e:
-        logger.critical(f"Falha no processo de upload do arquivo {arquivo.filename}: {e}", exc_info=True)
+        logger.critical(f"Falha crítica no upload: {e}", exc_info=True)
         flash(f"Erro ao processar: {e}", "error")
         return redirect(url_for('admin_bp.dashboard'))
 
