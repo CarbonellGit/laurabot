@@ -1,56 +1,56 @@
 """
-Módulo de Configuração
+Módulo de Configuração (Blindado)
 
-Este módulo define a classe de configuração principal para a aplicação Flask.
-Ele carrega variáveis de ambiente de um arquivo .env, garantindo que
-segredos (como chKeys de API) não sejam expostos no código-fonte.
-
+Define a classe de configuração principal. Implementa o padrão 'Fail Fast':
+se uma variável crítica estiver faltando, a aplicação nem inicia.
 """
 
 import os
 from dotenv import load_dotenv
 
-# Carrega as variáveis de ambiente do arquivo .env (se existir)
+# Carrega variáveis do arquivo .env
 load_dotenv()
-os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'  # Permite OAuth em HTTP (apenas para desenvolvimento)  
+
+# Em produção (Cloud Run/App Engine), OAUTHLIB_INSECURE_TRANSPORT deve ser removido ou tratado.
+# Mantemos aqui apenas se estivermos localmente, mas é bom ter atenção.
+if os.environ.get('FLASK_DEBUG') == '1':
+    os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
 class Config:
     """
     Classe de configuração base da aplicação.
-
-    As configurações são carregadas das variáveis de ambiente.
     """
 
-    # Chave secreta para o Flask (CRUCIAL para sessões)
-    # Trocada por uma string segura e aleatória no .env
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'uma-chave-secreta-padrao-insegura'
+    # === SEGURANÇA CRÍTICA (Fail Fast) ===
+    SECRET_KEY = os.environ.get('SECRET_KEY')
+    if not SECRET_KEY:
+        raise ValueError("ERRO CRÍTICO: 'SECRET_KEY' não encontrada no .env. A aplicação não pode iniciar insegura.")
 
-    # Configurações do Google Cloud (do PRD)
+    # === GOOGLE CLOUD & STORAGE ===
     GOOGLE_CLOUD_PROJECT = os.environ.get('GOOGLE_CLOUD_PROJECT')
-
-       # O Storage busca esta variável aqui, que por sua vez busca no .env
     GCS_BUCKET_NAME = os.environ.get('GCS_BUCKET_NAME')
+    
+    # Validação opcional para evitar erros tardios de upload
+    if not GCS_BUCKET_NAME:
+        print("AVISO: 'GCS_BUCKET_NAME' não configurado. Uploads falharão.")
 
-    # === NOVAS CONFIGS ===
+    # === IA & VETORES ===
     PINECONE_API_KEY = os.environ.get('PINECONE_API_KEY')
     GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY')
     
-    # Nome do índice que vamos criar no Pinecone
-    PINECONE_INDEX_NAME = 'laurabot-comunicados'
-    
-    # (Adicionaremos mais configurações aqui conforme necessário, 
-    # como as credenciais do Firestore)
+    if not PINECONE_API_KEY:
+        print("AVISO: 'PINECONE_API_KEY' ausente. O Chatbot não funcionará.")
+    if not GOOGLE_API_KEY:
+        print("AVISO: 'GOOGLE_API_KEY' ausente. O Chatbot não funcionará.")
 
-    # Configuração para o modo Debug
+    PINECONE_INDEX_NAME = 'laurabot-comunicados'
+
+    # === FLASK ===
     DEBUG = os.environ.get('FLASK_DEBUG', 'False').lower() in ('true', '1')
 
-    # === Credenciais OAuth (Login RF-001) ===
+    # === OAUTH (LOGIN) ===
     GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
     GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
 
- 
-
-    # === Credenciais de Serviço (Firestore RF-002) ===
-    # O SDK do Google usa esta variável de ambiente automaticamente
-    # Nós apenas a definimos no .env, não precisamos carregar no config.py
-    # GOOGLE_APPLICATION_CREDENTIALS = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS')
+    if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
+         raise ValueError("ERRO CRÍTICO: Credenciais OAuth (CLIENT_ID/SECRET) ausentes.")
