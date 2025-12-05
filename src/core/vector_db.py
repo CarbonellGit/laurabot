@@ -181,48 +181,68 @@ def buscar_documentos(query: str, filtro_segmentos: list = None, top_k=3) -> lis
         print(f"Erro na busca vetorial: {e}")
         return []
 
-def gerar_resposta_ia(pergunta: str, contextos: list) -> str:
+def gerar_resposta_ia(pergunta: str, contextos: list, historico: list = [], perfil_usuario: dict = {}) -> str:
     """
-    Monta o prompt com os contextos encontrados e pede a resposta ao Gemini.
+    Gera resposta considerando Contexto (RAG), Histórico (Memória) e Perfil do Usuário.
     """
     _configurar_gemini()
     
-    if not contextos:
-        return "Não encontrei nenhum comunicado oficial sobre esse assunto específico. Por favor, tente reformular a pergunta ou entre em contato com a secretaria."
+    # 1. Prepara dados do Perfil para o Prompt
+    texto_perfil = "PERFIL DO RESPONSÁVEL (QUEM ESTÁ PERGUNTANDO):\n"
+    if perfil_usuario and 'filhos' in perfil_usuario:
+        for f in perfil_usuario['filhos']:
+            integral_txt = " (Integral)" if f.get('integral') else ""
+            texto_perfil += f"- Filho(a): {f['nome']} | Segmento: {f['segmento']} | Série: {f.get('serie','')} {integral_txt}\n"
+    else:
+        texto_perfil += "Perfil não identificado.\n"
 
-    texto_contexto = ""
-    fontes_usadas = set()
+    # 2. Prepara o Histórico para o Prompt
+    texto_historico = ""
+    if historico:
+        texto_historico = "HISTÓRICO RECENTE DA CONVERSA:\n"
+        for msg in historico:
+            papel = "Usuário" if msg['role'] == 'user' else "LauraBot"
+            # Limpa marcações markdown do histórico para não confundir
+            conteudo_limpo = msg['content'].replace('\n', ' ')[:200] 
+            texto_historico += f"{papel}: {conteudo_limpo}...\n"
     
-    for doc in contextos:
-        texto_contexto += f"\n--- DOCUMENTO: {doc['fonte']} ---\n{doc['conteudo']}\n"
-        fontes_usadas.add(f"[{doc['fonte']}]({doc['link']})")
+    # 3. Prepara os Documentos (Contexto RAG)
+    texto_contexto_docs = ""
+    if contextos:
+        for doc in contextos:
+            texto_contexto_docs += f"\n--- DOCUMENTO: {doc['fonte']} | LINK: {doc['link']} ---\n{doc['conteudo']}\n"
+    else:
+        texto_contexto_docs = "Nenhum documento específico encontrado para esta busca."
 
+    # 4. Prompt System (Cérebro do Bot)
     prompt_sistema = f"""
     Você é o LauraBot, assistente virtual oficial do Colégio Carbonell.
-    Sua missão é responder dúvidas dos pais baseando-se EXCLUSIVAMENTE nos comunicados abaixo.
     
-    CONTEXTO DOS COMUNICADOS:
-    {texto_contexto}
+    {texto_perfil}
     
-    PERGUNTA DO USUÁRIO: 
+    {texto_historico}
+    
+    CONTEXTO DOS COMUNICADOS ENCONTRADOS AGORA:
+    {texto_contexto_docs}
+    
+    PERGUNTA ATUAL DO USUÁRIO: 
     "{pergunta}"
     
-    DIRETRIZES:
-    1. Responda de forma educada, acolhedora e direta (em português do Brasil).
-    2. Use APENAS as informações fornecidas no contexto acima. Se a informação não estiver lá, diga que não sabe. NÃO INVENTE.
-    3. Se a resposta for encontrada, cite o nome do comunicado de referência.
-    4. Formate a resposta usando Markdown (negrito para datas e pontos importantes).
+    DIRETRIZES DE RACIOCÍNIO:
+    1. **Identificação**: Se o usuário perguntar sobre "meu filho", "João", "a reunião", use o PERFIL e o HISTÓRICO para entender de quem/o que ele está falando. Ex: Se o histórico fala de reunião, e ele pergunta "que horas é?", é sobre a reunião citada antes.
+    2. **Filtro de Fonte**: Responda APENAS com base nos COMUNICADOS ENCONTRADOS. Se a informação não estiver lá, diga que não sabe.
+    3. **Integral**: Se o perfil do aluno for 'Integral' e houver documentos específicos de integral, priorize essas informações.
+    
+    DIRETRIZES DE RESPOSTA:
+    - Seja direto e útil.
+    - Se encontrou a resposta nos documentos, responda e no final adicione a seção "**Fonte(s):**" com o link markdown.
+    - Se NÃO encontrou, diga educadamente e NÃO invente fontes.
     """
 
     try:
         model = genai.GenerativeModel('gemini-2.5-flash')
         response = model.generate_content(prompt_sistema)
-        
-        resposta_final = response.text
-        
-        resposta_final += "\n\n**Fontes consultadas:**\n" + "\n".join([f"📄 {f}" for f in fontes_usadas])
-        
-        return resposta_final
+        return response.text
 
     except Exception as e:
         print(f"Erro na geração da resposta: {e}")
