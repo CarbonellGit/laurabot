@@ -8,53 +8,63 @@ document.addEventListener('DOMContentLoaded', () => {
         chatHistory.scrollTop = chatHistory.scrollHeight;
     }
 
-    // Função atualizada para renderizar Markdown
-    function appendMessage(text, sender) {
+    function createMessageElement(sender) {
         const div = document.createElement('div');
         div.classList.add('message');
         div.classList.add(sender === 'user' ? 'message-user' : 'message-bot');
-        
-        if (sender === 'bot') {
-            // Se for o Robô, converte Markdown -> HTML
-            // 'marked.parse' vem da biblioteca que adicionamos no base.html
-            div.innerHTML = marked.parse(text);
-        } else {
-            // Se for usuário, mantém texto puro por segurança (evita XSS)
-            div.innerText = text; 
-        }
-        
         chatHistory.appendChild(div);
-        scrollToBottom();
+        return div;
     }
 
     async function sendMessage() {
         const text = userInput.value.trim();
         if (!text) return;
 
-        appendMessage(text, 'user');
+        // 1. Mostra msg do usuário
+        const userMsgDiv = createMessageElement('user');
+        userMsgDiv.innerText = text;
+        
         userInput.value = '';
-        userInput.disabled = true; 
-        typingIndicator.style.display = 'block';
+        userInput.disabled = true;
         scrollToBottom();
 
         try {
+            // 2. Prepara o container da resposta do Bot (Vazio por enquanto)
+            const botMsgDiv = createMessageElement('bot');
+            let botTextAcumulado = "";
+            
+            // 3. Inicia o Request
             const response = await fetch('/enviar', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ message: text })
             });
 
-            const data = await response.json();
+            if (!response.ok) throw new Error('Erro na requisição');
 
-            typingIndicator.style.display = 'none';
-            appendMessage(data.response, 'bot');
+            // 4. Lê o Stream
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                // Decodifica o pedaço (chunk) recebido
+                const chunk = decoder.decode(value, { stream: true });
+                botTextAcumulado += chunk;
+
+                // Renderiza Markdown em tempo real
+                // (Isso permite que negritos e listas apareçam conforme o texto chega)
+                botMsgDiv.innerHTML = marked.parse(botTextAcumulado);
+                
+                scrollToBottom();
+            }
 
         } catch (error) {
             console.error('Erro:', error);
-            typingIndicator.style.display = 'none';
-            appendMessage("Desculpe, tive um erro de conexão. Tente novamente.", 'bot');
+            const errorDiv = createMessageElement('bot');
+            errorDiv.innerText = "Desculpe, tive um erro de conexão.";
         } finally {
             userInput.disabled = false;
             userInput.focus();
@@ -63,12 +73,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     btnSend.addEventListener('click', sendMessage);
-
     userInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            sendMessage();
+        if (e.key === 'Enter') sendMessage();
+    });
+    
+    // Renderiza markdown das mensagens antigas (se houver) ao carregar
+    document.querySelectorAll('.message-bot').forEach(el => {
+        // Verifica se já não foi renderizado (para evitar duplo parse)
+        if (!el.querySelector('p') && !el.querySelector('ul')) {
+             el.innerHTML = marked.parse(el.innerText);
         }
     });
     
-    userInput.focus();
+    scrollToBottom();
 });
