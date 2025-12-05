@@ -4,6 +4,7 @@ Rotas do Módulo de Autenticação
 Gerencia as rotas para /login, /logout, callbacks e cadastro de estudantes.
 """
 
+import re
 from flask import (
     render_template, 
     redirect, 
@@ -17,6 +18,8 @@ from . import services as auth_services
 from . import auth_bp  
 from src.core.oauth import oauth
 from src.core.database import db
+
+# === ROTAS DE LOGIN/LOGOUT (RF-001) ===
 
 @auth_bp.route('/login')
 def login():
@@ -72,10 +75,11 @@ def logout():
     return redirect(url_for('auth_bp.login'))
 
 
-# --- ROTAS DE CADASTRO (RF-004 e RF-005) ---
+# === ROTAS DE CADASTRO (RF-004 e RF-005) ===
 
 @auth_bp.route('/cadastro-estudantes')
-def cadastro_alunos(): # Mantivemos o nome da função interna por compatibilidade, mas a rota mudou
+def cadastro_alunos(): 
+    """ Exibe o formulário de primeiro cadastro. """
     if 'user_profile' not in session:
         return redirect(url_for('auth_bp.login'))
 
@@ -89,43 +93,43 @@ def cadastro_alunos(): # Mantivemos o nome da função interna por compatibilida
 def salvar_estudantes():
     """
     RF-005: Processa, higieniza e salva os dados dos estudantes no Firestore.
+    Inclui lógica para o campo 'Integral'.
     """
     if 'user_profile' not in session:
         return redirect(url_for('auth_bp.login'))
 
-    # O formulário envia dados no formato:
-    # estudantes[0][nome], estudantes[0][segmento], etc.
-    # Precisamos converter isso para uma lista de dicionários Python.
-    
+    # O formulário envia dados no formato: estudantes[0][nome], estudantes[0][segmento], etc.
     raw_form = request.form
     estudantes_processados = []
     
-    # Lógica manual para agrupar os campos do formulário
-    # (Existem bibliotecas como WTForms que fazem isso, mas faremos nativo para controle total)
+    # 1. Identifica quais índices (0, 1, 2...) foram enviados
     indices = set()
     for key in raw_form.keys():
         if key.startswith('estudantes['):
-            # Extrai o índice (ex: '0' de 'estudantes[0][nome]')
-            import re
+            # Extrai o número entre colchetes
             match = re.search(r'estudantes\[(\d+)\]', key)
             if match:
                 indices.add(int(match.group(1)))
     
-    # Para cada índice encontrado, montamos o objeto estudante
+    # 2. Processa cada estudante encontrado
     for i in sorted(indices):
         nome_raw = raw_form.get(f'estudantes[{i}][nome]', '')
         
-        # --- HIGIENIZAÇÃO DE DADOS (Evitar erros de digitação) ---
-        # 1. Strip: Remove espaços em branco no inicio e fim
-        # 2. Title: Converte "joao silva" para "Joao Silva"
+        # --- Higienização ---
         nome_limpo = nome_raw.strip().title()
         
+        # --- Campo Integral ---
+        # Checkbox HTML: se marcado envia 'on', se não marcado não envia nada (None)
+        integral_check = raw_form.get(f'estudantes[{i}][integral]')
+        is_integral = True if integral_check == 'on' else False
+
         estudante = {
             'nome': nome_limpo,
             'segmento': raw_form.get(f'estudantes[{i}][segmento]'),
             'serie': raw_form.get(f'estudantes[{i}][serie]'),
             'periodo': raw_form.get(f'estudantes[{i}][periodo]'),
-            'turma': raw_form.get(f'estudantes[{i}][turma]')
+            'turma': raw_form.get(f'estudantes[{i}][turma]'),
+            'integral': is_integral  # Novo campo salvo no banco
         }
         estudantes_processados.append(estudante)
 
@@ -133,7 +137,7 @@ def salvar_estudantes():
     if not estudantes_processados:
         return "Erro: Nenhum estudante enviado.", 400
 
-    # --- SALVAMENTO NO FIRESTORE (RF-005) ---
+    # --- Salvamento no Firestore ---
     try:
         user_email = session['user_profile']['email']
         
@@ -141,7 +145,7 @@ def salvar_estudantes():
         doc_ref = db.collection('responsaveis').document(user_email)
         
         doc_ref.update({
-            'filhos': estudantes_processados, # Mantemos a chave 'filhos' no banco por padrão, ou mudamos para 'estudantes' se preferir
+            'filhos': estudantes_processados, 
             'possui_cadastro_filhos': True,
             'ano_ultima_atualizacao': 2025 # Define o ano corrente (RF-007.1)
         })
@@ -149,7 +153,7 @@ def salvar_estudantes():
         # Atualiza a sessão local também para não precisar relogar
         session['user_profile']['possui_cadastro_filhos'] = True
         session['user_profile']['filhos'] = estudantes_processados
-        session.modified = True # Força o Flask a salvar a sessão
+        session.modified = True 
 
         return redirect(url_for('chat_bp.index'))
 
@@ -167,11 +171,10 @@ def perfil():
 
     email = session['user_profile']['email']
     
-    # Busca dados frescos do banco (importante!)
+    # Busca dados frescos do banco para popular o form de edição
     dados_atualizados = auth_services.obter_responsavel(email)
     
     if dados_atualizados:
-        # Atualiza a sessão também
         session['user_profile'] = dados_atualizados
         estudantes = dados_atualizados.get('filhos', [])
     else:

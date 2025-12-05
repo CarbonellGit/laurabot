@@ -45,17 +45,14 @@
             <div class="metadata-section">
                 <h3 class="section-title">
                     <span class="material-icons">group</span>
-                    Público Alvo (Quem deve receber?)
+                    Público Alvo
                 </h3>
 
                 <p style="margin-bottom: 0.5rem; font-size: 0.9rem; font-weight: 600;">Selecione o Segmento:</p>
                 <div class="segment-grid">
                     <div class="checkbox-card">
                         <input type="radio" name="segmento" id="seg-todos" value="TODOS" required>
-                        <label class="checkbox-label" for="seg-todos">
-                            TODOS
-                            <span class="checkbox-sublabel">Escola inteira</span>
-                        </label>
+                        <label class="checkbox-label" for="seg-todos">TODOS <span class="checkbox-sublabel">Escola inteira</span></label>
                     </div>
                     <div class="checkbox-card">
                         <input type="radio" name="segmento" id="seg-ei" value="EI">
@@ -75,10 +72,22 @@
                     </div>
                 </div>
 
-                <div id="container-series" style="display: none; animation: slideDown 0.3s ease;">
-                    <p style="margin-bottom: 0.5rem; font-size: 0.9rem; font-weight: 600;">Selecione as Séries (Opcional):</p>
-                    <div id="lista-series" class="segment-grid" style="grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));">
+                <div id="container-integral" style="display: none; margin-top: 1.5rem; animation: slideDown 0.3s ease;">
+                     <div style="background-color: #f0f7ff; border: 1px dashed var(--carbonell-azul-escuro); border-radius: 8px; padding: 1rem; display: flex; align-items: center; gap: 1rem;">
+                        <div style="flex: 1;">
+                            <strong style="color: var(--carbonell-azul-escuro); display: block;">Comunicado Exclusivo para o Integral?</strong>
+                            <small style="color: #666;">Se marcado, este arquivo será priorizado para alunos do integral.</small>
                         </div>
+                        <label class="switch">
+                            <input type="checkbox" name="integral" id="check-integral">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div id="container-series" style="display: none; margin-top: 1.5rem; animation: slideDown 0.3s ease;">
+                    <p style="margin-bottom: 0.5rem; font-size: 0.9rem; font-weight: 600;">Selecione as Séries (Opcional):</p>
+                    <div id="lista-series" class="segment-grid" style="grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));"></div>
                 </div>
 
                 <div id="container-periodo" style="display: none; margin-top: 1.5rem; animation: slideDown 0.3s ease;">
@@ -110,14 +119,10 @@
                             <input type="checkbox" name="turma" id="turma-c" value="C">
                             <label class="checkbox-label" for="turma-c">C</label>
                         </div>
-                         <div class="checkbox-card">
-                            <input type="checkbox" name="turma" id="turma-d" value="D">
-                            <label class="checkbox-label" for="turma-d">D</label>
-                        </div>
                     </div>
                     <small style="color: #666; display: block; margin-top: 0.5rem;">
                         <span class="material-icons" style="font-size: 1rem; vertical-align: middle;">info</span>
-                        Se nenhuma turma for marcada, o comunicado será enviado para <strong>todas</strong> as turmas das séries selecionadas.
+                        Se nenhuma turma for marcada, o comunicado será enviado para <strong>todas</strong>.
                     </small>
                 </div>
 

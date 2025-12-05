@@ -1,11 +1,9 @@
 /*
  * Lógica da Interface Admin (Upload e Gestão)
- * Gerencia Drag & Drop e Filtros Dinâmicos de Segmento.
- * Depende de: DADOS_ESCOLA (definido em dados_escola.js).
  */
 
 document.addEventListener('DOMContentLoaded', () => {
-    // === Elementos de Drag & Drop (Pode não existir na tela de edição) ===
+    // === Elementos de Drag & Drop ===
     const dropZone = document.getElementById('drop-zone');
     const fileInput = document.getElementById('file-upload');
     const filePreview = document.getElementById('file-preview');
@@ -13,17 +11,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const fileSizeDisplay = document.getElementById('file-size-display');
     const btnRemoveFile = document.getElementById('btn-remove-file');
     
-    // === Elementos de Filtro (Segmentação) ===
+    // === Elementos de Filtro ===
     const radiosSegmento = document.querySelectorAll('input[name="segmento"]');
     const containerSeries = document.getElementById('container-series');
     const listaSeries = document.getElementById('lista-series');
     const containerPeriodo = document.getElementById('container-periodo');
     const containerTurma = document.getElementById('container-turma');
+    const containerIntegral = document.getElementById('container-integral'); // NOVO
 
     // ------------------------------------------------------------------
-    // 1. Lógica de Drag & Drop (Só executa se existir na página)
+    // 1. Lógica de Drag & Drop
     // ------------------------------------------------------------------
-    
     if (dropZone && fileInput) {
         dropZone.addEventListener('click', () => fileInput.click());
 
@@ -64,9 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     alert('Por favor, selecione apenas arquivos PDF.');
                     return;
                 }
-                
                 try { fileInput.files = files; } catch(err) {}
-
                 fileNameDisplay.textContent = file.name;
                 fileSizeDisplay.textContent = formatBytes(file.size);
                 filePreview.style.display = 'flex';
@@ -82,12 +78,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-
     // ------------------------------------------------------------------
     // 2. Lógica Dinâmica de Segmentação (Filtros)
     // ------------------------------------------------------------------
     
-    // Escuta mudanças no rádio de segmento
     radiosSegmento.forEach(radio => {
         radio.addEventListener('change', (e) => {
             const segmento = e.target.value;
@@ -97,25 +91,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /**
      * Atualiza a visibilidade dos campos com base no Segmento.
-     * @param {string} segmento - Ex: 'EI', 'AI', 'TODOS'
-     * @param {boolean} manterSelecoes - Se true, não reseta os checkboxes (útil na edição).
      */
     function atualizarInterface(segmento, manterSelecoes = false) {
-        // Se for "TODOS", esconde e limpa
+        // Se for "TODOS", esconde tudo
         if (segmento === 'TODOS') {
             containerSeries.style.display = 'none';
             containerPeriodo.style.display = 'none';
             containerTurma.style.display = 'none';
+            if(containerIntegral) containerIntegral.style.display = 'none';
             return;
         }
 
-        // 1. Popula e Mostra Séries (DADOS_ESCOLA)
+        // 1. Popula Séries
         const series = DADOS_ESCOLA.series[segmento] || [];
-        
         if (series.length > 0) {
             containerSeries.style.display = 'block';
-            
-            // Só recria os checkboxes se não estivermos mantendo (Edição) ou se estiver vazio
             if (!manterSelecoes || listaSeries.children.length === 0) {
                  listaSeries.innerHTML = ''; 
                  criarCheckbox(listaSeries, 'series', 'TODAS', 'Todas as séries');
@@ -123,11 +113,19 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // 2. Lógica de Período
+        // 2. Lógica de Período e INTEGRAL (Modificada)
+        // Regra: EI e AI mostram Período e Integral. AF e EM não.
         if (['EI', 'AI'].includes(segmento)) {
             containerPeriodo.style.display = 'block';
+            if(containerIntegral) containerIntegral.style.display = 'block'; // Mostra Integral
         } else {
             containerPeriodo.style.display = 'none';
+            if(containerIntegral) {
+                containerIntegral.style.display = 'none'; // Esconde Integral
+                // Opcional: Desmarcar o switch se mudar de segmento
+                const chk = document.getElementById('check-integral');
+                if(chk && !manterSelecoes) chk.checked = false;
+            }
         }
 
         // 3. Mostra Turmas
@@ -135,13 +133,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function criarCheckbox(container, name, value, text) {
-        // Verifica se já existe para não duplicar na edição
         const idExistente = `${name}-${value.replace(/[^a-zA-Z0-9]/g, '')}`;
         if(document.getElementById(idExistente)) return;
 
         const div = document.createElement('div');
         div.className = 'checkbox-card';
-        
         div.innerHTML = `
             <input type="checkbox" name="${name}" id="${idExistente}" value="${value}">
             <label class="checkbox-label" for="${idExistente}">
@@ -152,18 +148,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- AUTO-INICIALIZAÇÃO PARA EDIÇÃO ---
-    // Verifica se algum segmento já está marcado ao carregar a página (Edição)
     const segmentoSelecionado = document.querySelector('input[name="segmento"]:checked');
     if (segmentoSelecionado) {
-        // Chama a atualização mas PRESERVA os checkboxes que já existem no HTML do server-side
-        // Nota: No template 'upload.html', os checkboxes de série são gerados dinamicamente.
-        // No template 'editar.html', precisamos garantir que o JS saiba lidar com isso.
-        
-        // Estratégia Simples: Disparamos a lógica padrão.
-        // Se for edição, o HTML virá com os checkboxes já marcados? 
-        // Não, o 'lista-series' começa vazio no HTML e é preenchido pelo JS.
-        // Precisaremos de um "pulo do gato" no editar.html para remarcar os itens.
-        
-        atualizarInterface(segmentoSelecionado.value, false);
+        // Passamos true para não limpar os valores que vieram do servidor
+        atualizarInterface(segmentoSelecionado.value, true);
     }
 });

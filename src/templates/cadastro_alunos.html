@@ -52,9 +52,9 @@
         <div class="form-grid">
             <div class="form-group span-full">
                 <label>Nome do Estudante</label>
-                <input type="text" name="estudantes[{index}][nome]" placeholder="Ex: Maria da Silva" minlength="3"
-                    pattern="[A-Za-zÀ-ÖØ-öø-ÿ\s\.]+" title="Por favor, insira apenas letras." required>
-                <small class="input-help">Digite o nome completo (sem números).</small>
+                <input class="input-nome" type="text" name="estudantes[{index}][nome]" placeholder="Ex: Maria da Silva"
+                    minlength="3" pattern="[A-Za-zÀ-ÖØ-öø-ÿ\s\.]+" required>
+                <small class="input-help">Digite o nome completo.</small>
             </div>
 
             <div class="form-group">
@@ -87,6 +87,7 @@
                     </select>
                 </div>
             </div>
+            
             <div class="form-group">
                 <label>Turma</label>
                 <div class="select-wrapper">
@@ -95,6 +96,18 @@
                     </select>
                 </div>
             </div>
+
+            <div class="integral-section">
+                <div class="integral-label">
+                    Participa do Integral?
+                    <div class="integral-desc">Marque se o aluno fica no colégio em período integral.</div>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" name="estudantes[{index}][integral]" class="check-integral">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
         </div>
     </div>
 </template>

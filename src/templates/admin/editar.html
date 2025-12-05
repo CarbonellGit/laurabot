@@ -43,6 +43,19 @@
                     {% endfor %}
                 </div>
 
+                <div id="container-integral" style="display: none; margin-top: 1.5rem; animation: slideDown 0.3s ease;">
+                     <div style="background-color: #f0f7ff; border: 1px dashed var(--carbonell-azul-escuro); border-radius: 8px; padding: 1rem; display: flex; align-items: center; gap: 1rem;">
+                        <div style="flex: 1;">
+                            <strong style="color: var(--carbonell-azul-escuro); display: block;">Comunicado Exclusivo para o Integral?</strong>
+                            <small style="color: #666;">Se marcado, este arquivo será priorizado para alunos do integral.</small>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" name="integral" id="check-integral" {% if arquivo.integral %}checked{% endif %}>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+
                 <div id="container-series" style="display: none;">
                     <p style="margin-bottom: 0.5rem; font-size: 0.9rem; font-weight: 600;">Séries:</p>
                     <div id="lista-series" class="segment-grid" style="grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));">
@@ -65,7 +78,7 @@
                 <div id="container-turma" style="display: none; margin-top: 1.5rem;">
                     <p style="margin-bottom: 0.5rem; font-size: 0.9rem; font-weight: 600;">Turmas Específicas:</p>
                     <div class="segment-grid" style="grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));">
-                        {% for t in ['A', 'B', 'C', 'D'] %}
+                        {% for t in ['A', 'B', 'C'] %}
                         <div class="checkbox-card">
                             <input type="checkbox" name="turma" id="turma-{{ t }}" value="{{ t }}"
                                    {% if t in arquivo.turmas %}checked{% endif %}>
@@ -97,13 +110,9 @@
 </script>
 
 <script>
-    // Script Inline específico para a tela de Edição
     document.addEventListener('DOMContentLoaded', () => {
-        
-        // 1. Recupera os dados do bloco JSON acima de forma segura
         const elementoDados = document.getElementById('dados-series-json');
         let seriesSalvas = [];
-        
         try {
             if (elementoDados && elementoDados.textContent) {
                 seriesSalvas = JSON.parse(elementoDados.textContent);
@@ -112,21 +121,13 @@
             console.error("Erro ao ler dados de séries:", e);
         }
         
-        // 2. Lógica para marcar os checkboxes
-        // Pequeno delay para garantir que o admin.js criou os elementos dinâmicos
         setTimeout(() => {
             if (seriesSalvas && seriesSalvas.length > 0) {
                 seriesSalvas.forEach(serie => {
-                    // Tenta encontrar o checkbox pelo valor
-                    // O admin.js cria checkboxes com value="X"
-                    // Precisamos escapar caracteres especiais no seletor ou iterar manualmente
                     const inputs = document.querySelectorAll('#lista-series input[type="checkbox"]');
-                    
                     inputs.forEach(inp => {
                         if (inp.value === serie) {
                             inp.checked = true;
-                            // Opcional: Disparar evento de change se houver lógica atrelada
-                            inp.dispatchEvent(new Event('change'));
                         }
                     });
                 });

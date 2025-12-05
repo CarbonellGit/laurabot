@@ -45,7 +45,6 @@
         </form>
     </div>
 </div>
-
 <template id="template-estudante">
     <div class="estudante-card" data-index="{index}">
         <div class="estudante-card-header">
@@ -93,6 +92,7 @@
                     </select>
                 </div>
             </div>
+            
             <div class="form-group">
                 <label>Turma</label>
                 <div class="select-wrapper">
@@ -101,6 +101,18 @@
                     </select>
                 </div>
             </div>
+
+            <div class="integral-section">
+                <div class="integral-label">
+                    Participa do Integral?
+                    <div class="integral-desc">Marque se o aluno fica no colégio em período integral.</div>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" name="estudantes[{index}][integral]" class="check-integral">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
         </div>
     </div>
 </template>
