@@ -372,3 +372,68 @@ input:focus + .slider {
 input:checked + .slider:before {
     transform: translateX(24px);
 }
+
+/* === BARRA DE FILTROS (Fase 6) === */
+.filter-bar {
+    display: flex;
+    gap: 1rem;
+    background-color: #fff;
+    padding: 1.5rem;
+    border-radius: 10px;
+    border: 1px solid var(--borda-suave);
+    margin-bottom: 2rem;
+    flex-wrap: wrap; /* Responsivo */
+    box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    align-items: center;
+}
+
+.filter-group {
+    flex: 1;
+    min-width: 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.filter-group label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--carbonell-azul-escuro);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.filter-input, .filter-select {
+    width: 100%;
+    padding: 0.6rem 1rem;
+    border: 1px solid var(--borda-suave);
+    border-radius: 6px;
+    font-size: 0.95rem;
+    color: var(--texto-corpo);
+    background-color: var(--fundo-claro);
+    transition: all 0.2s;
+}
+
+.filter-input:focus, .filter-select:focus {
+    background-color: #fff;
+    border-color: var(--carbonell-azul-escuro);
+    outline: none;
+}
+
+/* Ajuste para o ícone de limpar filtros (opcional) */
+.btn-clear-filters {
+    padding: 0.6rem;
+    color: #666;
+    background: none;
+    border: 1px solid var(--borda-suave);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: 0.2s;
+    margin-top: auto; /* Alinha com os inputs */
+}
+.btn-clear-filters:hover {
+    background-color: #ffeaea;
+    color: var(--cor-erro);
+    border-color: #ffaaaa;
+}

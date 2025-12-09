@@ -154,3 +154,93 @@ document.addEventListener('DOMContentLoaded', () => {
         atualizarInterface(segmentoSelecionado.value, true);
     }
 });
+
+/*
+ * Lógica de Filtros da Biblioteca (Fase 6)
+ */
+document.addEventListener('DOMContentLoaded', () => {
+    const filterNome = document.getElementById('filter-nome');
+    const filterSegmento = document.getElementById('filter-segmento');
+    const filterData = document.getElementById('filter-data');
+    const btnReset = document.getElementById('btn-reset-filters');
+    const fileGrid = document.getElementById('file-grid');
+    const noResults = document.getElementById('no-results');
+    const countVisible = document.getElementById('count-visible');
+
+    if (!filterNome || !fileGrid) return; // Só executa na página de gerenciar
+
+    const cards = Array.from(document.querySelectorAll('.file-card'));
+    
+    // Atualiza o contador inicial
+    if(countVisible) countVisible.textContent = cards.length;
+
+    function aplicarFiltros() {
+        const termoNome = filterNome.value.toLowerCase();
+        const segSelecionado = filterSegmento.value;
+        const dataSelecionada = filterData.value; // Formato YYYY-MM-DD
+        
+        let visiveis = 0;
+
+        cards.forEach(card => {
+            const nomeArquivo = card.getAttribute('data-nome') || '';
+            const segmentoArquivo = card.getAttribute('data-segmento');
+            const isIntegral = card.getAttribute('data-integral') === 'true';
+            const dataArquivo = card.getAttribute('data-date');
+
+            // 1. Filtro de Nome (Contém)
+            const matchNome = nomeArquivo.includes(termoNome);
+
+            // 2. Filtro de Segmento (Lógica Especial para INT)
+            let matchSegmento = true;
+            if (segSelecionado !== 'TODOS') {
+                if (segSelecionado === 'INT') {
+                    // Se filtro for INT, verifica se a flag integral é true
+                    matchSegmento = isIntegral;
+                } else {
+                    // Senão, verifica match exato do segmento (EI, AI, etc)
+                    matchSegmento = (segmentoArquivo === segSelecionado);
+                }
+            }
+
+            // 3. Filtro de Data (Match exato da data de upload)
+            let matchData = true;
+            if (dataSelecionada) {
+                matchData = (dataArquivo === dataSelecionada);
+            }
+
+            // Decide visibilidade
+            if (matchNome && matchSegmento && matchData) {
+                card.style.display = 'flex'; // ou 'block' dependendo do CSS do card
+                visiveis++;
+            } else {
+                card.style.display = 'none';
+            }
+        });
+
+        // Feedback Visual
+        if (countVisible) countVisible.textContent = visiveis;
+
+        if (visiveis === 0) {
+            fileGrid.style.display = 'none';
+            if(noResults) noResults.style.display = 'block';
+        } else {
+            fileGrid.style.display = 'grid';
+            if(noResults) noResults.style.display = 'none';
+        }
+    }
+
+    // Event Listeners para feedback em tempo real
+    filterNome.addEventListener('input', aplicarFiltros);
+    filterSegmento.addEventListener('change', aplicarFiltros);
+    filterData.addEventListener('change', aplicarFiltros);
+
+    // Botão de Limpar
+    if (btnReset) {
+        btnReset.addEventListener('click', () => {
+            filterNome.value = '';
+            filterSegmento.value = 'TODOS';
+            filterData.value = '';
+            aplicarFiltros();
+        });
+    }
+});

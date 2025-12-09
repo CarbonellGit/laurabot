@@ -23,10 +23,47 @@
         </a>
     </div>
 
+    <div class="filter-bar">
+        <div class="filter-group">
+            <label><span class="material-icons" style="font-size: 1.1rem;">search</span> Buscar por Nome</label>
+            <input type="text" id="filter-nome" class="filter-input" placeholder="Ex: Viagem, Calendário...">
+        </div>
+
+        <div class="filter-group" style="flex: 0 0 200px;">
+            <label><span class="material-icons" style="font-size: 1.1rem;">filter_list</span> Segmento</label>
+            <select id="filter-segmento" class="filter-select">
+                <option value="TODOS">Todos</option>
+                <option value="EI">Educação Infantil (EI)</option>
+                <option value="AI">Anos Iniciais (AI)</option>
+                <option value="AF">Anos Finais (AF)</option>
+                <option value="EM">Ensino Médio (EM)</option>
+                <option value="INT">Integral (INT)</option>
+            </select>
+        </div>
+
+        <div class="filter-group" style="flex: 0 0 160px;">
+            <label><span class="material-icons" style="font-size: 1.1rem;">event</span> Data Upload</label>
+            <input type="date" id="filter-data" class="filter-input">
+        </div>
+        
+        <button id="btn-reset-filters" class="btn-clear-filters" title="Limpar Filtros">
+            <span class="material-icons">filter_alt_off</span>
+        </button>
+    </div>
+
+    <div style="margin-bottom: 1rem; color: #666; font-size: 0.9rem;">
+        Mostrando <strong id="count-visible">0</strong> de {{ arquivos|length }} arquivos.
+    </div>
+
     {% if arquivos %}
-        <div class="file-list-grid">
+        <div class="file-list-grid" id="file-grid">
             {% for arquivo in arquivos %}
-            <div class="file-card">
+            <div class="file-card" 
+                 data-nome="{{ arquivo.nome_arquivo | lower }}" 
+                 data-segmento="{{ arquivo.segmento }}"
+                 data-integral="{{ 'true' if arquivo.integral else 'false' }}"
+                 data-date="{% if arquivo.criado_em %}{{ arquivo.criado_em.strftime('%Y-%m-%d') }}{% endif %}">
+                 
                 <div class="file-card-header">
                     <div class="file-icon-box">
                         <span class="material-icons file-icon">picture_as_pdf</span>
@@ -40,7 +77,7 @@
                             {% if arquivo.criado_em %}
                                 {{ arquivo.criado_em.strftime('%d/%m/%Y') }}
                             {% else %}
-                                Data desc.
+                                --/--/----
                             {% endif %}
                         </div>
                     </div>
@@ -48,31 +85,27 @@
 
                 <div class="tags-container">
                     <span class="tag tag-segmento">{{ arquivo.segmento }}</span>
+                    {% if arquivo.integral %}
+                        <span class="tag" style="background:var(--carbonell-amarelo); color:#fff;">Integral</span>
+                    {% endif %}
                     
                     {% if arquivo.series %}
                         {% for s in arquivo.series[:2] %}
                             <span class="tag tag-serie">{{ s }}</span>
                         {% endfor %}
-                        {% if arquivo.series|length > 2 %}
-                            <span class="tag tag-serie">+{{ arquivo.series|length - 2 }}</span>
-                        {% endif %}
-                    {% endif %}
-
-                    {% if arquivo.turmas %}
-                         <span class="tag tag-turma">Turmas: {{ ', '.join(arquivo.turmas) }}</span>
                     {% endif %}
                 </div>
 
                 <div class="file-card-actions">
-                    <a href="{{ url_for('admin_bp.editar_arquivo', doc_id=arquivo.id) }}" class="btn-icon btn-edit" title="Editar Público Alvo">
+                    <a href="{{ url_for('admin_bp.editar_arquivo', doc_id=arquivo.id) }}" class="btn-icon btn-edit" title="Editar">
                         <span class="material-icons">edit</span> Editar
                     </a>
                     
-                    <a href="{{ arquivo.url_download }}" target="_blank" class="btn-icon btn-edit" title="Baixar PDF">
+                    <a href="{{ arquivo.url_download }}" target="_blank" class="btn-icon btn-edit" title="Baixar">
                         <span class="material-icons">download</span>
                     </a>
 
-                    <form action="{{ url_for('admin_bp.excluir_arquivo', doc_id=arquivo.id) }}" method="POST" style="flex: 1;" onsubmit="return confirm('Tem certeza que deseja excluir este comunicado? O bot deixará de usá-lo imediatamente.');">
+                    <form action="{{ url_for('admin_bp.excluir_arquivo', doc_id=arquivo.id) }}" method="POST" style="flex: 1;" onsubmit="return confirm('Excluir este arquivo?');">
                         <button type="submit" class="btn-icon btn-delete" style="width: 100%;">
                             <span class="material-icons">delete</span> Excluir
                         </button>
@@ -81,13 +114,24 @@
             </div>
             {% endfor %}
         </div>
+        
+        <div id="no-results" class="empty-state" style="display: none;">
+            <span class="material-icons empty-icon">search_off</span>
+            <h3>Nenhum arquivo encontrado.</h3>
+            <p>Tente ajustar os filtros de busca.</p>
+        </div>
+
     {% else %}
         <div class="empty-state">
-            <span class="material-icons empty-icon">folder_open</span>
-            <h3>Nenhum comunicado encontrado.</h3>
-            <p>Faça o upload do seu primeiro PDF para começar.</p>
+            <span class="material-icons empty-icon">cloud_off</span>
+            <h3>Nenhum comunicado cadastrado.</h3>
+            <p>Faça o upload do primeiro arquivo.</p>
         </div>
     {% endif %}
 
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
 {% endblock %}
