@@ -3,6 +3,7 @@ Módulo Principal da Aplicação (Application Factory)
 """
 
 from flask import Flask
+from werkzeug.middleware.proxy_fix import ProxyFix # Importação necessária para o Cloud Run
 from config import Config
 
 # Importa a instância do oauth
@@ -17,6 +18,12 @@ def create_app(config_class=Config):
                 instance_relative_config=True,
                 static_folder='static',
                 template_folder='templates')
+
+    # === CORREÇÃO HTTPS (Cloud Run) ===
+    # Ajusta o Flask para entender que está atrás de um Proxy (Cloud Run)
+    # Isso garante que ele gere URLs com 'https://' em vez de 'http://'
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+    # ==================================
 
     # 1. Carrega a configuração
     app.config.from_object(config_class)
