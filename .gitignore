@@ -29,3 +29,7 @@ Thumbs.db
 
 # Ignorar chaves de serviço do Google
 gcp-service-account.json
+
+# Scripts de Manutenção Local
+debug_pinecone.py
+reset_pinecone.py

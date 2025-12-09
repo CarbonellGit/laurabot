@@ -86,7 +86,7 @@ def atualizar_metadados_vetor(doc_id: str, novos_metadados: dict):
         logger.error(f"Erro ao atualizar metadados {doc_id}: {e}", exc_info=True)
         raise e
 
-def buscar_documentos(query: str, filtro_segmentos: list = None, top_k=3) -> list:
+def buscar_documentos(query: str, filtro_segmentos: list = None, top_k=4) -> list: # Aumentei top_k para 4
     if not query: return []
     try:
         _configurar_gemini()
@@ -113,14 +113,27 @@ def buscar_documentos(query: str, filtro_segmentos: list = None, top_k=3) -> lis
         )
         
         docs = []
+        logger.info(f"--- RESULTADOS DA BUSCA PARA: '{query}' ---")
+        
         for match in resultados['matches']:
-            if match['score'] > 0.40:
+            score = match['score']
+            doc_id = match['id']
+            # LOG DE DEBUG IMPORTANTE: Mostra o que o Pinecone achou e a nota
+            logger.info(f"Arquivo: {doc_id} | Score: {score:.4f}")
+
+            # AJUSTE DA RÉGUA: Baixamos de 0.40 para 0.25
+            # Isso permite matches "menos perfeitos" mas semanticamente úteis
+            if score > 0.25:
                 docs.append({
-                    'id': match['id'],
+                    'id': doc_id,
                     'conteudo': match['metadata'].get('text', ''),
                     'fonte': match['metadata'].get('nome_arquivo', 'Arquivo'),
                     'link': match['metadata'].get('url_download', '#')
                 })
+        
+        if not docs:
+            logger.warning("Nenhum documento atingiu o score mínimo de 0.25")
+
         return docs
 
     except Exception as e:

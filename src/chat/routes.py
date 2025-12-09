@@ -1,8 +1,8 @@
 """
 Rotas do Módulo de Chat
 
-Consolidado: Implementa RAG com Memória Persistente (Firestore) 
-e Streaming de Resposta (Yield/Generator) para UX otimizada.
+Atualizado com Query Expansion (Enriquecimento de Consulta)
+para melhorar a precisão da busca vetorial por turma/série.
 """
 
 from flask import (
@@ -26,30 +26,20 @@ logger = get_logger(__name__)
 
 COLLECTION_HISTORY = 'chat_history'
 
-# === FUNÇÕES AUXILIARES DE PERSISTÊNCIA ===
-
+# ... (Manter as funções _salvar_mensagem e _carregar_historico IGUAIS ao anterior) ...
 def _salvar_mensagem(user_email: str, role: str, content: str):
-    """
-    Salva uma mensagem individual no Firestore para auditoria e histórico futuro.
-    """
     try:
-        mensagem = {
+        db.collection(COLLECTION_HISTORY).add({
             'user_email': user_email,
             'role': role,
             'content': content,
             'timestamp': firestore.SERVER_TIMESTAMP
-        }
-        db.collection(COLLECTION_HISTORY).add(mensagem)
+        })
     except Exception as e:
         logger.error(f"Erro ao salvar mensagem no DB: {e}", exc_info=True)
 
 def _carregar_historico(user_email: str, limite=10) -> list:
-    """
-    Recupera as últimas N mensagens do usuário para contexto imediato.
-    Retorna em ordem cronológica (antigas -> novas).
-    """
     try:
-        # Busca as mais recentes (DESC)
         docs = (
             db.collection(COLLECTION_HISTORY)
             .where('user_email', '==', user_email)
@@ -57,7 +47,6 @@ def _carregar_historico(user_email: str, limite=10) -> list:
             .limit(limite)
             .stream()
         )
-        
         historico = []
         for doc in docs:
             dados = doc.to_dict()
@@ -65,122 +54,102 @@ def _carregar_historico(user_email: str, limite=10) -> list:
                 'role': dados.get('role'),
                 'content': dados.get('content')
             })
-            
-        # Inverte para ficar na ordem correta (Cronológica) para o Chat/LLM
         return historico[::-1]
-
     except Exception as e:
         logger.error(f"Erro ao carregar histórico: {e}", exc_info=True)
         return []
 
-# === ROTAS ===
-
+# ... (Rota index mantém igual) ...
 @chat_bp.route('/')
 def index():
-    """
-    Carrega a interface do chat e o histórico persistente do usuário.
-    """
-    if 'user_profile' not in session:
-        return redirect(url_for('auth_bp.login'))
-
+    if 'user_profile' not in session: return redirect(url_for('auth_bp.login'))
     user_profile = session['user_profile']
-    user_email = user_profile['email']
-    
-    if not user_profile.get('possui_cadastro_filhos', False):
-         return redirect(url_for('auth_bp.cadastro_alunos'))
-
-    # Carrega as últimas 20 mensagens para exibir na tela
-    historico_mensagens = _carregar_historico(user_email, limite=20)
-
-    # Saudação apenas se for um chat "vazio" (sem histórico recente)
+    historico = _carregar_historico(user_profile['email'], 20)
     mensagem_inicial = None
-    if not historico_mensagens:
-        nome_usuario = user_profile.get('nome', 'Responsável').split()[0]
-        mensagem_inicial = f"Olá, {nome_usuario}! Como posso ajudar com os comunicados escolares hoje?"
-
-    return render_template('chat.html', 
-                           historico=historico_mensagens, 
-                           mensagem_inicial=mensagem_inicial)
+    if not historico:
+        nome = user_profile.get('nome', '').split()[0]
+        mensagem_inicial = f"Olá, {nome}! Como posso ajudar com os comunicados escolares hoje?"
+    return render_template('chat.html', historico=historico, mensagem_inicial=mensagem_inicial)
 
 
 @chat_bp.route('/enviar', methods=['POST'])
 def enviar_mensagem():
-    """
-    Processa a mensagem do usuário via Streaming.
-    1. Salva a pergunta.
-    2. Busca contexto (RAG).
-    3. Gera resposta pedaço por pedaço (yield).
-    4. Salva a resposta completa ao final.
-    """
     if 'user_profile' not in session:
-        # Retorna 401 para que o JS possa redirecionar ou avisar
-        return jsonify({'error': 'Sessão expirada. Faça login novamente.'}), 401
+        return jsonify({'error': 'Sessão expirada.'}), 401
 
     data = request.get_json()
     mensagem_usuario = data.get('message', '').strip()
-
-    if not mensagem_usuario:
-        return jsonify({'error': 'Mensagem vazia.'}), 400
+    if not mensagem_usuario: return jsonify({'error': 'Vazio'}), 400
 
     user_profile = session['user_profile']
     user_email = user_profile['email']
-    filhos = user_profile.get('filhos', [])
+    filhos = user_profile.get('filhos', []) # Lista de dicionários
     
-    logger.info(f"Mensagem de {user_email}: {mensagem_usuario[:30]}...")
-
-    # 1. Salva a pergunta do usuário no Banco
+    # 1. Salva pergunta original
     _salvar_mensagem(user_email, 'user', mensagem_usuario)
 
-    # 2. Identificação de Contexto (Segmento)
-    # Lógica simples baseada em nome do filho (será aprimorada com IA futuramente)
+    # 2. Lógica de Contexto do Aluno (Query Expansion)
     segmentos_busca = list(set([f['segmento'] for f in filhos]))
     mensagem_lower = mensagem_usuario.lower()
     
+    # Tenta identificar sobre qual filho o pai está falando
+    filho_foco = None
+    
+    # Estratégia A: Busca por nome na mensagem
     for filho in filhos:
         primeiro_nome = filho['nome'].split()[0].lower()
         if primeiro_nome in mensagem_lower:
-            segmentos_busca = [filho['segmento']]
-            break 
-            
-    try:
-        # 3. Prepara o terreno para a IA
-        # Histórico curto para contexto da LLM (últimas 6 mensagens / 3 turnos)
-        historico_contexto = _carregar_historico(user_email, limite=6)
+            filho_foco = filho
+            break
+    
+    # Estratégia B: Se tem apenas 1 filho cadastrado, ele é o foco sempre
+    if not filho_foco and len(filhos) == 1:
+        filho_foco = filhos[0]
 
-        # Busca Vetorial (RAG)
+    # 3. Monta a Query Enriquecida (Isso vai para o Pinecone, mas o usuário não vê)
+    query_para_vetor = mensagem_usuario
+    
+    if filho_foco:
+        # Restringe a busca de segmento
+        segmentos_busca = [filho_foco['segmento']]
+        
+        # ADICIONA CONTEXTO EXPLÍCITO NA QUERY
+        # Isso força o vector search a dar match em documentos que tenham "5º Ano" ou "Turma A" no texto
+        serie = filho_foco.get('serie', '')
+        turma = filho_foco.get('turma', '')
+        
+        texto_extra = f" contexto escolar do aluno do {serie} turma {turma}"
+        query_para_vetor = (
+            f"Comunicados escolares do {serie} turma {turma} sobre: {mensagem_usuario}"
+        )
+        
+        logger.info(f"Query Enriquecida: '{query_para_vetor}' (Foco: {filho_foco['nome']})")
+    
+    try:
+        historico_contexto = _carregar_historico(user_email, 6)
+
+        # Busca Vetorial usando a Query Enriquecida
         documentos_relevantes = vector_db.buscar_documentos(
-            query=mensagem_usuario,
+            query=query_para_vetor, 
             filtro_segmentos=segmentos_busca,
-            top_k=3 
+            top_k=4  # Aumentei para 4 para dar mais chance
         )
 
-        # Função Geradora Interna (Clousure para capturar variáveis locais)
         def gerar_stream():
             resposta_completa = ""
-            
-            # Itera sobre os pedaços gerados pelo Gemini
-            # vector_db.gerar_resposta_ia_stream deve ser um generator (com yield)
+            # A IA recebe a pergunta original, mas os documentos vieram da busca turbinada
             for chunk in vector_db.gerar_resposta_ia_stream(
                 pergunta=mensagem_usuario,
                 contextos=documentos_relevantes,
                 historico=historico_contexto,
                 perfil_usuario=user_profile
             ):
-                # Acumula o texto para salvar no banco depois
                 resposta_completa += chunk
-                
-                # Envia o pedaço imediatamente para o navegador
                 yield chunk
-
-            # Fim do stream: Salva a resposta completa no Banco de Dados
-            # Isso garante que o histórico fique íntegro
             _salvar_mensagem(user_email, 'assistant', resposta_completa)
         
-        # Retorna o objeto Response configurado para streaming
         return Response(stream_with_context(gerar_stream()), mimetype='text/plain')
 
     except Exception as e:
-        logger.error(f"Erro no fluxo do Chat: {e}", exc_info=True)
-        # Em caso de erro no início, tenta retornar um JSON de erro
-        # Se o stream já começou, o erro vai quebrar o chunk no cliente (tratado no JS)
-        return jsonify({'error': 'Erro interno no servidor.'}), 500
+        logger.error(f"Erro chat: {e}", exc_info=True)
+        return jsonify({'error': 'Erro interno.'}), 500

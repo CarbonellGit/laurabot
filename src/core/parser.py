@@ -3,7 +3,7 @@ Módulo de Parsing e Inteligência de Documentos
 
 Responsável por:
 1. Extrair texto bruto de arquivos PDF.
-2. Usar LLM (Gemini) para classificar o documento (Segmento, Série, Assunto).
+2. Usar LLM (Gemini) para classificar o documento (Segmento, Série, Turma, Assunto).
 """
 
 import json
@@ -18,12 +18,20 @@ logger = get_logger(__name__)
 
 def extrair_texto_pdf(arquivo_storage) -> str:
     """
-    Lê o PDF e extrai todo o texto.
+    Lê o PDF (objeto FileStorage ou BytesIO) e extrai todo o texto.
     Retorna string vazia em caso de erro.
     """
     try:
         # Lê o arquivo em memória
-        pdf_bytes = BytesIO(arquivo_storage.read())
+        # Se for BytesIO (Thread), lê direto. Se for FileStorage (Flask), lê via .read()
+        if isinstance(arquivo_storage, BytesIO):
+            pdf_bytes = arquivo_storage
+        else:
+            pdf_bytes = BytesIO(arquivo_storage.read())
+            # Reseta ponteiro se for FileStorage, caso precise ser usado novamente
+            if hasattr(arquivo_storage, 'seek'):
+                arquivo_storage.seek(0)
+
         reader = PdfReader(pdf_bytes)
         texto_completo = ""
 
@@ -31,9 +39,6 @@ def extrair_texto_pdf(arquivo_storage) -> str:
             texto_pag = page.extract_text()
             if texto_pag:
                 texto_completo += texto_pag + "\n"
-        
-        # Reseta o ponteiro para que possa ser salvo no Storage depois
-        arquivo_storage.seek(0)
         
         return texto_completo.strip()
 
@@ -54,7 +59,12 @@ def _analisar_regex_fallback(nome_arquivo: str) -> dict:
     """
     Fallback: Tenta extrair metadados básicos via Regex se a IA falhar.
     """
-    tags = {'segmento': 'TODOS', 'series': [], 'assunto': 'Comunicado Geral'}
+    tags = {
+        'segmento': 'TODOS', 
+        'series': [], 
+        'turmas': [], # Campo novo para compatibilidade
+        'assunto': 'Comunicado Geral'
+    }
     nome_upper = nome_arquivo.upper()
     
     if 'EI' in nome_upper or 'INFANTIL' in nome_upper: tags['segmento'] = 'EI'
@@ -62,7 +72,8 @@ def _analisar_regex_fallback(nome_arquivo: str) -> dict:
     elif 'AF' in nome_upper or 'ANOS FINAIS' in nome_upper: tags['segmento'] = 'AF'
     elif 'EM' in nome_upper or 'MEDIO' in nome_upper: tags['segmento'] = 'EM'
     
-    match_series = re.findall(r'\((\d+)\)', nome_arquivo)
+    # Regex simples para séries entre parênteses: (1) ou (5A)
+    match_series = re.findall(r'\((\d+)[A-Z]?\)', nome_arquivo)
     if match_series:
         tags['series'] = [f"{num}º Ano/Série" for num in match_series]
         
@@ -71,21 +82,21 @@ def _analisar_regex_fallback(nome_arquivo: str) -> dict:
 def analisar_metadados_ia(texto_completo: str, nome_arquivo: str) -> dict:
     """
     Envia o início do texto do PDF para o Gemini identificar metadados.
-    Retorna um dicionário com: segmento, series (lista), assunto.
+    Retorna um dicionário com: segmento, series, turmas, assunto.
     """
     if not _configurar_gemini() or not texto_completo:
         return _analisar_regex_fallback(nome_arquivo)
 
-    # Pegamos apenas os primeiros 2000 caracteres (cabeçalho/início) para economizar tokens e tempo
-    texto_analise = texto_completo[:2000]
+    # Contexto limitado para economizar tokens
+    texto_analise = texto_completo[:2500]
 
     prompt = f"""
     Analise o cabeçalho escolar e o texto abaixo extraído de um comunicado (PDF).
-    Extraia e retorne APENAS um objeto JSON (sem markdown) com as chaves:
+    Retorne APENAS um objeto JSON válido (sem markdown) com as chaves:
     
-    - "segmento": Escolha UM entre ["EI", "AI", "AF", "EM", "TODOS"]. 
-      (EI=Infantil, AI=1º ao 5º ano, AF=6º ao 9º ano, EM=Médio). Se não for claro ou for para todos, use "TODOS".
-    - "series": Lista de strings com as séries citadas (ex: ["1º Ano", "3ª Série"]). Se for para todo o segmento, retorne lista vazia [].
+    - "segmento": Escolha UM entre ["EI", "AI", "AF", "EM", "TODOS"].
+    - "series": Lista de strings (ex: ["1º Ano", "5º Ano"]). Se o texto disser "AI/5A", entenda como "5º Ano".
+    - "turmas": Lista de strings (ex: ["A", "B"]). Se o texto disser "5A" ou "5º A", a turma é "A". Se não especificar, retorne [].
     - "assunto": Um resumo curto do título/tema (máx 5 palavras).
 
     Texto do arquivo ({nome_arquivo}):
@@ -94,9 +105,6 @@ def analisar_metadados_ia(texto_completo: str, nome_arquivo: str) -> dict:
 
     try:
         model = genai.GenerativeModel('gemini-2.5-flash')
-        
-        # Generation Config força resposta JSON (feature nova do Gemini 1.5/2.0, 
-        # mas aqui vamos usar prompt engineering clássico para garantir compatibilidade)
         response = model.generate_content(prompt)
         raw_text = response.text.strip()
 
@@ -110,6 +118,7 @@ def analisar_metadados_ia(texto_completo: str, nome_arquivo: str) -> dict:
         dados_finais = {
             'segmento': dados_ia.get('segmento', 'TODOS'),
             'series': dados_ia.get('series', []),
+            'turmas': dados_ia.get('turmas', []),
             'assunto': dados_ia.get('assunto', 'Comunicado')
         }
         
