@@ -28,17 +28,14 @@
     </header>
 
     <div id="chat-history" class="chat-history">
-        {# 1. Renderiza mensagens do histórico (Se houver navegação interna ou F5 com persistência futura) #}
+        {# 1. Renderiza mensagens do histórico #}
         {% if historico %}
             {% for msg in historico %}
                 <div class="message {% if msg.role == 'user' %}message-user{% else %}message-bot{% endif %}">
                     {% if msg.role == 'assistant' %}
-                        {# TRUQUE DE FRONTEND PARA MARKDOWN ROBUSTO: 
-                           Guardamos o conteúdo cru (Markdown) num container oculto 
-                           e deixamos o JS preencher o container visível com HTML formatado. 
-                        #}
-                        <div class="markdown-render-target" style="display: none;">{{ msg.content }}</div>
-                        <div class="markdown-output"></div>
+                        {# ESTRATÉGIA SEGURA: O texto cru começa VISÍVEL. O JS o esconde depois. #}
+                        <div class="markdown-render-target">{{ msg.content }}</div>
+                        <div class="markdown-output" style="display: none;"></div>
                     {% else %}
                         {{ msg.content }}
                     {% endif %}
@@ -46,12 +43,12 @@
             {% endfor %}
         {% endif %}
 
-        {# 2. Mensagem Inicial (Sempre aparece em nova sessão/refresh) #}
+        {# 2. Mensagem Inicial #}
         {% if mensagem_inicial %}
         <div class="message message-bot">
-            {# A mensagem inicial também pode ter markdown (negritos), então usamos a mesma lógica #}
-            <div class="markdown-render-target" style="display: none;">{{ mensagem_inicial }}</div>
-            <div class="markdown-output"></div>
+            {# O mesmo vale aqui. Se o JS falhar, o usuário vê o markdown cru, mas vê a mensagem! #}
+            <div class="markdown-render-target">{{ mensagem_inicial }}</div>
+            <div class="markdown-output" style="display: none;"></div>
         </div>
         {% endif %}
     </div>
@@ -70,28 +67,42 @@
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
 
-{# Script Específico para formatar mensagens estáticas (vindas do servidor) #}
+{# Script Robusto de Renderização #}
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // Seleciona todas as mensagens do bot que precisam de renderização
-        // (Isso cobre tanto o histórico quanto a mensagem inicial)
+        // Verifica se a biblioteca marked carregou
+        const hasMarked = typeof marked !== 'undefined';
+        if (!hasMarked) console.warn("Aviso: Biblioteca 'marked' não carregada. Exibindo texto bruto.");
+
         const targets = document.querySelectorAll('.message-bot');
 
         targets.forEach(msgDiv => {
             const rawSource = msgDiv.querySelector('.markdown-render-target');
             const outputDiv = msgDiv.querySelector('.markdown-output');
 
-            if (rawSource && outputDiv) {
-                // Pega o texto Markdown cru vindo do Python
-                const rawText = rawSource.textContent;
-                
-                // Converte para HTML usando a biblioteca 'marked' (carregada no base.html)
-                // e insere na div de saída
-                outputDiv.innerHTML = marked.parse(rawText);
+            if (rawSource && outputDiv && hasMarked) {
+                try {
+                    // 1. Pega o texto
+                    const rawText = rawSource.textContent;
+                    // 2. Converte
+                    const htmlContent = marked.parse(rawText);
+                    
+                    // 3. Verifica se a conversão gerou algo válido
+                    if (htmlContent && htmlContent.trim() !== "") {
+                        outputDiv.innerHTML = htmlContent;
+                        
+                        // 4. TROCA SEGURA DE VISIBILIDADE
+                        outputDiv.style.display = 'block';
+                        rawSource.style.display = 'none';
+                    }
+                } catch (e) {
+                    console.error("Erro ao renderizar markdown:", e);
+                    // Em caso de erro, mantém o original visível (fallback)
+                }
             }
         });
         
-        // Garante que o scroll vá para o final após a renderização
+        // Scroll para o final
         const chatHistory = document.getElementById('chat-history');
         if(chatHistory) {
             chatHistory.scrollTop = chatHistory.scrollHeight;
