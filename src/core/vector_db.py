@@ -6,7 +6,7 @@ from flask import current_app
 from pinecone import Pinecone
 from src.core.logger import get_logger
 from src.core.ai import configurar_genai, get_embedding_model, get_generative_model
-import google.generativeai as genai # Necessário para tipagem ou chamadas diretas
+import google.generativeai as genai
 
 logger = get_logger(__name__)
 
@@ -101,6 +101,7 @@ def buscar_documentos(query: str, filtro_segmentos: list = None, top_k=4) -> lis
         logger.info(f"--- RESULTADOS DA BUSCA PARA: '{query}' ---")
         
         for match in resultados['matches']:
+            # Score mínimo mantido em 0.25 para não perder contexto relevante
             if match['score'] > 0.25:
                 docs.append({
                     'id': match['id'],
@@ -116,10 +117,11 @@ def buscar_documentos(query: str, filtro_segmentos: list = None, top_k=4) -> lis
         return []
 
 def gerar_resposta_ia_stream(pergunta: str, contextos: list, historico: list = [], perfil_usuario: dict = {}):
-    # Lógica de prompt mantida, mas usando o model da factory
+    """
+    Gera resposta em STREAM (Yield) com Prompt Refinado para evitar links indesejados.
+    """
     model = get_generative_model()
     
-    # ... (código de montagem do prompt mantido igual ao original) ...
     texto_perfil = "PERFIL DO RESPONSÁVEL:\n"
     if perfil_usuario.get('filhos'):
         for f in perfil_usuario['filhos']:
@@ -138,19 +140,26 @@ def gerar_resposta_ia_stream(pergunta: str, contextos: list, historico: list = [
     else:
         texto_docs = "Nenhum documento encontrado."
 
+    # === PROMPT REFINADO (FIX) ===
     prompt_sistema = f"""
     Você é o LauraBot, assistente do Colégio Carbonell.
+    Seja educado, prestativo e direto.
     
     {texto_perfil}
     {texto_historico}
     
-    CONTEXTO (DOCUMENTOS):
+    CONTEXTO (DOCUMENTOS ESCOLARES):
     {texto_docs}
     
-    PERGUNTA: "{pergunta}"
+    PERGUNTA DO USUÁRIO: "{pergunta}"
     
-    Responda com base SOMENTE nos documentos. Se não souber, diga.
-    Cite a fonte com link Markdown no final: [Nome Arquivo](URL).
+    DIRETRIZES DE RESPOSTA (SIGA RIGOROSAMENTE):
+    1. Responda APENAS com base nos documentos fornecidos acima.
+    2. Se a informação solicitada NÃO estiver nos documentos, diga educadamente: "Não encontrei essa informação nos comunicados recentes."
+    3. REGRA DE OURO SOBRE LINKS:
+       - SE e SOMENTE SE você encontrou a resposta no documento, cite a fonte no final usando o formato: [Nome do Arquivo](Link).
+       - SE você não encontrou a resposta ou se a resposta for negativa (ex: "não há informações"), NÃO COLOQUE NENHUM LINK OU CITAÇÃO.
+       - Nunca invente links.
     """
 
     try:
@@ -158,6 +167,7 @@ def gerar_resposta_ia_stream(pergunta: str, contextos: list, historico: list = [
         for chunk in response:
             if chunk.text:
                 yield chunk.text
+
     except Exception as e:
         logger.error(f"Erro na geração stream: {e}", exc_info=True)
         yield "Desculpe, tive um erro técnico."
