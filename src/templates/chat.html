@@ -28,14 +28,14 @@
     </header>
 
     <div id="chat-history" class="chat-history">
-        {# 1. Se houver histórico antigo (Recarregamento/F5), renderiza #}
+        {# 1. Renderiza mensagens do histórico (Se houver navegação interna ou F5 com persistência futura) #}
         {% if historico %}
             {% for msg in historico %}
                 <div class="message {% if msg.role == 'user' %}message-user{% else %}message-bot{% endif %}">
                     {% if msg.role == 'assistant' %}
-                        {# TRUQUE DE FRONTEND: 
-                           Guardamos o conteúdo cru no atributo 'hidden' (data-content) 
-                           e deixamos a div vazia ou com loader para o JS preencher formatado. 
+                        {# TRUQUE DE FRONTEND PARA MARKDOWN ROBUSTO: 
+                           Guardamos o conteúdo cru (Markdown) num container oculto 
+                           e deixamos o JS preencher o container visível com HTML formatado. 
                         #}
                         <div class="markdown-render-target" style="display: none;">{{ msg.content }}</div>
                         <div class="markdown-output"></div>
@@ -46,10 +46,12 @@
             {% endfor %}
         {% endif %}
 
-        {# 2. Mensagem Inicial (Sempre aparece se histórico for novo) #}
+        {# 2. Mensagem Inicial (Sempre aparece em nova sessão/refresh) #}
         {% if mensagem_inicial %}
         <div class="message message-bot">
-            <div class="markdown-output">{{ mensagem_inicial }}</div>
+            {# A mensagem inicial também pode ter markdown (negritos), então usamos a mesma lógica #}
+            <div class="markdown-render-target" style="display: none;">{{ mensagem_inicial }}</div>
+            <div class="markdown-output"></div>
         </div>
         {% endif %}
     </div>
@@ -68,10 +70,11 @@
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
 
-{# Script Específico para formatar mensagens que vieram do Backend (F5) #}
+{# Script Específico para formatar mensagens estáticas (vindas do servidor) #}
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // Seleciona todos os blocos que precisam de renderização
+        // Seleciona todas as mensagens do bot que precisam de renderização
+        // (Isso cobre tanto o histórico quanto a mensagem inicial)
         const targets = document.querySelectorAll('.message-bot');
 
         targets.forEach(msgDiv => {
@@ -79,18 +82,20 @@
             const outputDiv = msgDiv.querySelector('.markdown-output');
 
             if (rawSource && outputDiv) {
-                // Pega o texto cru do Python
+                // Pega o texto Markdown cru vindo do Python
                 const rawText = rawSource.textContent;
-                // Converte para HTML com Marked
+                
+                // Converte para HTML usando a biblioteca 'marked' (carregada no base.html)
+                // e insere na div de saída
                 outputDiv.innerHTML = marked.parse(rawText);
-                // Exibe o resultado
-                outputDiv.style.display = 'block';
             }
         });
         
-        // Rola para o final após renderizar
+        // Garante que o scroll vá para o final após a renderização
         const chatHistory = document.getElementById('chat-history');
-        if(chatHistory) chatHistory.scrollTop = chatHistory.scrollHeight;
+        if(chatHistory) {
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
     });
 </script>
 {% endblock %}

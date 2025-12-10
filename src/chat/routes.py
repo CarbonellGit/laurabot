@@ -6,7 +6,7 @@ Atualizado:
 - Query Expansion para RAG.
 """
 
-import uuid  # <--- IMPORTAÇÃO NOVA
+import uuid
 from flask import (
     render_template, 
     session, 
@@ -35,7 +35,7 @@ def _salvar_mensagem(user_email: str, role: str, content: str, conversation_id: 
     try:
         db.collection(COLLECTION_HISTORY).add({
             'user_email': user_email,
-            'conversation_id': conversation_id, # <--- CAMPO NOVO
+            'conversation_id': conversation_id,
             'role': role,
             'content': content,
             'timestamp': firestore.SERVER_TIMESTAMP
@@ -45,14 +45,14 @@ def _salvar_mensagem(user_email: str, role: str, content: str, conversation_id: 
 
 def _carregar_historico(user_email: str, conversation_id: str, limite=20) -> list:
     """
-    Carrega apenas as mensagens da conversa ATUAL.
+    Carrega apenas as mensagens da conversa ATUAL (filtrada pelo conversation_id).
     """
     try:
         # Filtra por email E pelo ID da conversa atual
         docs = (
             db.collection(COLLECTION_HISTORY)
             .where('user_email', '==', user_email)
-            .where('conversation_id', '==', conversation_id) # <--- FILTRO NOVO
+            .where('conversation_id', '==', conversation_id)
             .order_by('timestamp', direction=firestore.Query.DESCENDING)
             .limit(limite)
             .stream()
@@ -74,22 +74,19 @@ def index():
     if 'user_profile' not in session: return redirect(url_for('auth_bp.login'))
     user_profile = session['user_profile']
     
-    # === SOLUÇÃO PROBLEMA 1 e 2 ===
-    # Gera um novo ID de conversa a cada carregamento da página (F5 ou nova aba)
-    # Isso garante que o chat comece "limpo" visualmente.
+    # === SOLUÇÃO: ISOLAMENTO DE SESSÃO ===
+    # Gera um novo ID de conversa a cada carregamento da página (F5, Nova Aba ou Link Externo).
+    # Isso garante que o chat comece sempre "limpo" visualmente para o usuário.
     conversation_id = str(uuid.uuid4())
     session['conversation_id'] = conversation_id
     
-    # Como o ID é novo, isso retornará vazio, forçando a mensagem inicial
+    # Como o ID é novo, isso retornará uma lista vazia, forçando a mensagem inicial
     historico = _carregar_historico(user_profile['email'], conversation_id)
     
     mensagem_inicial = None
     if not historico:
         nome = user_profile.get('nome', '').split()[0]
-        mensagem_inicial = f"Olá, {nome}! Sou a LauraBot. Como posso ajudar com os comunicados escolares hoje?"
-        
-        # Opcional: Salvar a mensagem inicial no banco para ficar registrada na conversa
-        # _salvar_mensagem(user_profile['email'], 'assistant', mensagem_inicial, conversation_id)
+        mensagem_inicial = f"Olá, **{nome}**! Sou a LauraBot.\n\nComo posso ajudar com os comunicados escolares hoje?"
 
     return render_template('chat.html', historico=historico, mensagem_inicial=mensagem_inicial)
 
@@ -101,8 +98,9 @@ def enviar_mensagem():
 
     # Recupera o ID da conversa atual da sessão
     conversation_id = session.get('conversation_id')
+    
+    # Fallback de segurança: se por algum motivo a sessão perdeu o ID (raro), gera um novo
     if not conversation_id:
-        # Fallback de segurança se a sessão tiver reiniciado
         conversation_id = str(uuid.uuid4())
         session['conversation_id'] = conversation_id
 
@@ -114,34 +112,42 @@ def enviar_mensagem():
     user_email = user_profile['email']
     filhos = user_profile.get('filhos', []) 
     
-    # 1. Salva pergunta original com o ID da conversa
+    # 1. Salva pergunta original com o ID da conversa atual
     _salvar_mensagem(user_email, 'user', mensagem_usuario, conversation_id)
 
-    # 2. Lógica de Contexto do Aluno (Mantida igual)
+    # 2. Lógica de Contexto do Aluno (Query Expansion)
     segmentos_busca = list(set([f['segmento'] for f in filhos]))
     mensagem_lower = mensagem_usuario.lower()
     filho_foco = None
+    
+    # Tenta identificar sobre qual filho o pai está falando
     for filho in filhos:
         primeiro_nome = filho['nome'].split()[0].lower()
         if primeiro_nome in mensagem_lower:
             filho_foco = filho
             break
+    
     if not filho_foco and len(filhos) == 1:
         filho_foco = filhos[0]
 
-    # 3. Monta a Query (Mantida igual)
+    # 3. Monta a Query Enriquecida
     query_para_vetor = mensagem_usuario
+    
     if filho_foco:
         segmentos_busca = [filho_foco['segmento']]
         serie = filho_foco.get('serie', '')
         turma = filho_foco.get('turma', '')
-        query_para_vetor = f"Comunicados escolares do {serie} turma {turma} sobre: {mensagem_usuario}"
+        
+        query_para_vetor = (
+            f"Comunicados escolares do {serie} turma {turma} sobre: {mensagem_usuario}"
+        )
         logger.info(f"Query Enriquecida: '{query_para_vetor}' (Foco: {filho_foco['nome']})")
     
     try:
-        # Carrega contexto para a IA (passando o conversation_id)
+        # Carrega contexto para a IA (passando o conversation_id para manter coerência)
         historico_contexto = _carregar_historico(user_email, conversation_id, 6)
 
+        # Busca Vetorial
         documentos_relevantes = vector_db.buscar_documentos(
             query=query_para_vetor, 
             filtro_segmentos=segmentos_busca,
@@ -159,7 +165,7 @@ def enviar_mensagem():
                 resposta_completa += chunk
                 yield chunk
             
-            # Salva resposta final com o ID da conversa
+            # Salva resposta final com o ID da conversa atual
             _salvar_mensagem(user_email, 'assistant', resposta_completa, conversation_id)
         
         return Response(stream_with_context(gerar_stream()), mimetype='text/plain')
