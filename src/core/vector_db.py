@@ -123,7 +123,7 @@ def buscar_documentos(query: str, filtro_segmentos: list = None, top_k=4) -> lis
 
             # AJUSTE DA RÉGUA: Baixamos de 0.40 para 0.25
             # Isso permite matches "menos perfeitos" mas semanticamente úteis
-            if score > 0.25:
+            if score > 0.40:
                 docs.append({
                     'id': doc_id,
                     'conteudo': match['metadata'].get('text', ''),
@@ -132,7 +132,7 @@ def buscar_documentos(query: str, filtro_segmentos: list = None, top_k=4) -> lis
                 })
         
         if not docs:
-            logger.warning("Nenhum documento atingiu o score mínimo de 0.25")
+            logger.warning("Nenhum documento atingiu o score mínimo de 0.40")
 
         return docs
 
