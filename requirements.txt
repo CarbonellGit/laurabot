@@ -1,24 +1,25 @@
 # Framework Web
-Flask
+Flask==3.0.3
+Werkzeug==3.0.3
+gunicorn==22.0.0
 
-# Para carregar variáveis de ambiente (segredos)
-python-dotenv
+# Variáveis de Ambiente
+python-dotenv==1.0.1
 
-# SDK do Google Cloud (para Firestore RF-002 e App Engine RNF)
-google-cloud-firestore
-google-cloud-storage 
+# Google Cloud
+google-cloud-firestore==2.16.0
+google-cloud-storage==2.16.0
+google-auth==2.29.0
 
-# SDK do Google Cloud (para Firestore RF-002 e App Engine RNF)
-google-cloud-firestore
-google-cloud-storage 
+# Autenticação
+Authlib==1.3.0
+requests==2.31.0
 
-# Bibliotecas para Login com Google (OAuth 2.0)
-Authlib
+# Processamento de PDF
+pypdf==4.2.0
 
-pypdf
-
-# Banco de Dados Vetorial (RAG)
-pinecone
+# Banco de Dados Vetorial
+pinecone-client==3.2.2
 
 # IA Generativa (Google Gemini)
-google-generativeai
+google-generativeai==0.5.2

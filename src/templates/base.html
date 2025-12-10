@@ -45,7 +45,12 @@
         </main>
 
     </div>
-    <script src="{{ url_for('static', filename='js/dados_escola.js') }}"></script>
+
+    <script>
+        // O uso de aspas simples e JSON.parse evita erros de sintaxe no editor (VS Code)
+        const DADOS_ESCOLA = JSON.parse('{{ DADOS_ESCOLA_GLOBAL | tojson | safe }}');
+    </script>
+    
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     

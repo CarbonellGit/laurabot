@@ -10,9 +10,8 @@ import json
 import re
 from io import BytesIO
 from pypdf import PdfReader
-from flask import current_app
-import google.generativeai as genai
 from src.core.logger import get_logger
+from src.core.ai import get_generative_model
 
 logger = get_logger(__name__)
 
@@ -46,15 +45,6 @@ def extrair_texto_pdf(arquivo_storage) -> str:
         logger.error(f"Erro ao extrair texto do PDF: {e}", exc_info=True)
         return ""
 
-def _configurar_gemini():
-    """Configura a API Key do Gemini."""
-    api_key = current_app.config.get('GOOGLE_API_KEY')
-    if not api_key:
-        logger.error("GOOGLE_API_KEY não configurada para o Parser.")
-        return False
-    genai.configure(api_key=api_key)
-    return True
-
 def _analisar_regex_fallback(nome_arquivo: str) -> dict:
     """
     Fallback: Tenta extrair metadados básicos via Regex se a IA falhar.
@@ -62,7 +52,7 @@ def _analisar_regex_fallback(nome_arquivo: str) -> dict:
     tags = {
         'segmento': 'TODOS', 
         'series': [], 
-        'turmas': [], # Campo novo para compatibilidade
+        'turmas': [],
         'assunto': 'Comunicado Geral'
     }
     nome_upper = nome_arquivo.upper()
@@ -84,7 +74,7 @@ def analisar_metadados_ia(texto_completo: str, nome_arquivo: str) -> dict:
     Envia o início do texto do PDF para o Gemini identificar metadados.
     Retorna um dicionário com: segmento, series, turmas, assunto.
     """
-    if not _configurar_gemini() or not texto_completo:
+    if not texto_completo:
         return _analisar_regex_fallback(nome_arquivo)
 
     # Contexto limitado para economizar tokens
@@ -104,7 +94,8 @@ def analisar_metadados_ia(texto_completo: str, nome_arquivo: str) -> dict:
     """
 
     try:
-        model = genai.GenerativeModel('gemini-2.5-flash')
+        # Usa a factory centralizada do src/core/ai.py
+        model = get_generative_model()
         response = model.generate_content(prompt)
         raw_text = response.text.strip()
 

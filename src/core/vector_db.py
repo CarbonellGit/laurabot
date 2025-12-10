@@ -1,19 +1,15 @@
 """
-Módulo de Banco de Dados Vetorial e IA (Pinecone + Gemini)
-
-Responsável por Embeddings, RAG e Geração de Texto.
-Agora com suporte a Streaming (yield) e Logging estruturado.
+Módulo de Banco de Dados Vetorial.
+Refatorado para usar configuração centralizada de IA.
 """
-
-import time
 from flask import current_app
-from pinecone import Pinecone, ServerlessSpec
-import google.generativeai as genai
+from pinecone import Pinecone
 from src.core.logger import get_logger
+from src.core.ai import configurar_genai, get_embedding_model, get_generative_model
+import google.generativeai as genai # Necessário para tipagem ou chamadas diretas
 
 logger = get_logger(__name__)
 
-# Configuração Global (Lazy Loading)
 _pinecone_client = None
 
 def _get_pinecone_client():
@@ -21,35 +17,24 @@ def _get_pinecone_client():
     if _pinecone_client is None:
         api_key = current_app.config.get('PINECONE_API_KEY')
         if not api_key:
-            logger.critical("PINECONE_API_KEY não configurada.")
             raise ValueError("PINECONE_API_KEY não configurada.")
         _pinecone_client = Pinecone(api_key=api_key)
     return _pinecone_client
 
-def _configurar_gemini():
-    api_key = current_app.config.get('GOOGLE_API_KEY')
-    if not api_key:
-        logger.critical("GOOGLE_API_KEY não configurada.")
-        raise ValueError("GOOGLE_API_KEY não configurada.")
-    genai.configure(api_key=api_key)
-
 def salvar_no_vetor(doc_id: str, texto_completo: str, metadados: dict):
-    """Gera o vetor do texto e salva no Pinecone."""
     try:
-        _configurar_gemini()
+        configurar_genai()
         # Gera Embedding
         resultado = genai.embed_content(
-            model="models/text-embedding-004",
+            model=get_embedding_model(),
             content=texto_completo.replace("\n", " "),
             task_type="retrieval_document"
         )
         vetor = resultado['embedding']
 
         pc = _get_pinecone_client()
-        index_name = current_app.config.get('PINECONE_INDEX_NAME')
-        index = pc.Index(index_name)
+        index = pc.Index(current_app.config.get('PINECONE_INDEX_NAME'))
 
-        # Truncate seguro para metadados (limite do Pinecone 40kb)
         texto_safe = texto_completo[:30000]
 
         registro = {
@@ -86,12 +71,12 @@ def atualizar_metadados_vetor(doc_id: str, novos_metadados: dict):
         logger.error(f"Erro ao atualizar metadados {doc_id}: {e}", exc_info=True)
         raise e
 
-def buscar_documentos(query: str, filtro_segmentos: list = None, top_k=4) -> list: # Aumentei top_k para 4
+def buscar_documentos(query: str, filtro_segmentos: list = None, top_k=4) -> list:
     if not query: return []
     try:
-        _configurar_gemini()
+        configurar_genai()
         emb_res = genai.embed_content(
-            model="models/text-embedding-004",
+            model=get_embedding_model(),
             content=query,
             task_type="retrieval_query"
         )
@@ -116,24 +101,14 @@ def buscar_documentos(query: str, filtro_segmentos: list = None, top_k=4) -> lis
         logger.info(f"--- RESULTADOS DA BUSCA PARA: '{query}' ---")
         
         for match in resultados['matches']:
-            score = match['score']
-            doc_id = match['id']
-            # LOG DE DEBUG IMPORTANTE: Mostra o que o Pinecone achou e a nota
-            logger.info(f"Arquivo: {doc_id} | Score: {score:.4f}")
-
-            # AJUSTE DA RÉGUA: Baixamos de 0.40 para 0.25
-            # Isso permite matches "menos perfeitos" mas semanticamente úteis
-            if score > 0.40:
+            if match['score'] > 0.25:
                 docs.append({
-                    'id': doc_id,
+                    'id': match['id'],
                     'conteudo': match['metadata'].get('text', ''),
                     'fonte': match['metadata'].get('nome_arquivo', 'Arquivo'),
                     'link': match['metadata'].get('url_download', '#')
                 })
         
-        if not docs:
-            logger.warning("Nenhum documento atingiu o score mínimo de 0.40")
-
         return docs
 
     except Exception as e:
@@ -141,12 +116,10 @@ def buscar_documentos(query: str, filtro_segmentos: list = None, top_k=4) -> lis
         return []
 
 def gerar_resposta_ia_stream(pergunta: str, contextos: list, historico: list = [], perfil_usuario: dict = {}):
-    """
-    Gera resposta em STREAM (Yield) considerando Contexto e Histórico.
-    """
-    _configurar_gemini()
+    # Lógica de prompt mantida, mas usando o model da factory
+    model = get_generative_model()
     
-    # Montagem do Prompt (Mesma lógica da fase anterior)
+    # ... (código de montagem do prompt mantido igual ao original) ...
     texto_perfil = "PERFIL DO RESPONSÁVEL:\n"
     if perfil_usuario.get('filhos'):
         for f in perfil_usuario['filhos']:
@@ -181,14 +154,10 @@ def gerar_resposta_ia_stream(pergunta: str, contextos: list, historico: list = [
     """
 
     try:
-        model = genai.GenerativeModel('gemini-2.5-flash')
-        # Habilita o streaming na API do Google
         response = model.generate_content(prompt_sistema, stream=True)
-        
         for chunk in response:
             if chunk.text:
                 yield chunk.text
-
     except Exception as e:
         logger.error(f"Erro na geração stream: {e}", exc_info=True)
         yield "Desculpe, tive um erro técnico."

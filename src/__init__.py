@@ -7,6 +7,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix # Importação necessária pa
 from config import Config
 
 # Importa a instância do oauth
+from .core.constants import DADOS_ESCOLA
 from .core.oauth import oauth
 
 def create_app(config_class=Config):
@@ -46,6 +47,12 @@ def create_app(config_class=Config):
         )
     else:
         print("AVISO: GOOGLE_CLIENT_ID ou GOOGLE_CLIENT_SECRET não definidos.")
+
+    # === NOVO: Context Processor ===
+    # Isso injeta 'DADOS_ESCOLA' em todos os templates HTML automaticamente.
+    @app.context_processor
+    def inject_school_data():
+        return dict(DADOS_ESCOLA_GLOBAL=DADOS_ESCOLA)
 
 
     # 3. Configura os Blueprints (Módulos)
