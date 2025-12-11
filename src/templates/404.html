@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="error-page">
+    <h1 class="error-code">404</h1>
+    <h2 class="error-title">Página não encontrada</h2>
+    <p class="error-description">Desculpe, a página que você está procurando não existe ou foi movida.</p>
+    <a href="{{ url_for('auth_bp.login') }}" class="btn btn-primary">Voltar para a Página Inicial</a>
+</div>
+{% endblock %}

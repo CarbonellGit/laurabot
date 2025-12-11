@@ -187,3 +187,40 @@ body {
 .alert-close:hover {
     color: #fff;
 }
+/* === PÁGINAS DE ERRO (404/500) === */
+.error-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    text-align: center;
+    padding: 2rem;
+}
+
+.error-code {
+    font-size: 6rem;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 1rem;
+    color: #cbd5e0; /* Cinza claro padrão */
+}
+
+.error-code.error-500 {
+    color: var(--cor-erro);
+}
+
+.error-title {
+    font-size: 2rem;
+    font-weight: 600;
+    color: var(--carbonell-azul-escuro);
+    margin-bottom: 1rem;
+}
+
+.error-description {
+    font-size: 1.2rem;
+    color: var(--texto-corpo);
+    margin-bottom: 2rem;
+    max-width: 600px;
+}
+
