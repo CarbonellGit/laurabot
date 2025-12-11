@@ -9,16 +9,19 @@
 
 {% block content %}
 <div class="admin-container">
-    
-    <div style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+
+    <div
+        style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
         <div>
-            <a href="{{ url_for('admin_bp.dashboard') }}" style="text-decoration: none; color: var(--carbonell-azul-escuro); display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 600; margin-bottom: 0.5rem;">
+            <a href="{{ url_for('admin_bp.dashboard') }}"
+                style="text-decoration: none; color: var(--carbonell-azul-escuro); display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 600; margin-bottom: 0.5rem;">
                 <span class="material-icons">arrow_back</span> Voltar
             </a>
             <h1 style="color: var(--carbonell-azul-escuro); margin: 0;">Biblioteca de Comunicados</h1>
         </div>
-        
-        <a href="{{ url_for('admin_bp.upload_form') }}" class="btn-primary" style="padding: 0.6rem 1.2rem; font-size: 0.9rem;">
+
+        <a href="{{ url_for('admin_bp.upload_form') }}" class="btn-primary"
+            style="padding: 0.6rem 1.2rem; font-size: 0.9rem;">
             <span class="material-icons">add</span> Novo Upload
         </a>
     </div>
@@ -45,7 +48,7 @@
             <label><span class="material-icons" style="font-size: 1.1rem;">event</span> Data Upload</label>
             <input type="date" id="filter-data" class="filter-input">
         </div>
-        
+
         <button id="btn-reset-filters" class="btn-clear-filters" title="Limpar Filtros">
             <span class="material-icons">filter_alt_off</span>
         </button>
@@ -56,80 +59,118 @@
     </div>
 
     {% if arquivos %}
-        <div class="file-list-grid" id="file-grid">
-            {% for arquivo in arquivos %}
-            <div class="file-card" 
-                 data-nome="{{ arquivo.nome_arquivo | lower }}" 
-                 data-segmento="{{ arquivo.segmento }}"
-                 data-integral="{{ 'true' if arquivo.integral else 'false' }}"
-                 data-date="{% if arquivo.criado_em %}{{ arquivo.criado_em.strftime('%Y-%m-%d') }}{% endif %}">
-                 
-                <div class="file-card-header">
-                    <div class="file-icon-box">
-                        <span class="material-icons file-icon">picture_as_pdf</span>
-                    </div>
-                    <div class="file-details">
-                        <div class="file-title" title="{{ arquivo.nome_arquivo }}">
-                            {{ arquivo.nome_arquivo }}
-                        </div>
-                        <div class="file-date">
-                            <span class="material-icons" style="font-size: 14px;">calendar_today</span>
-                            {% if arquivo.criado_em %}
-                                {{ arquivo.criado_em.strftime('%d/%m/%Y') }}
-                            {% else %}
-                                --/--/----
-                            {% endif %}
-                        </div>
-                    </div>
+    <div class="file-list-grid" id="file-grid">
+        {% for arquivo in arquivos %}
+        <div class="file-card" data-nome="{{ arquivo.nome_arquivo | lower }}" data-segmento="{{ arquivo.segmento }}"
+            data-integral="{{ 'true' if arquivo.integral else 'false' }}"
+            data-date="{% if arquivo.criado_em %}{{ arquivo.criado_em.strftime('%Y-%m-%d') }}{% endif %}">
+
+            <div class="file-card-header" style="position: relative;">
+                <!-- Status Icon (Polling Target) -->
+                {% if arquivo.status == 'processando' %}
+                <span id="status-icon-{{ arquivo.id }}" class="material-icons status-polling" data-id="{{ arquivo.id }}"
+                    style="position: absolute; top: -5px; right: -5px; color: var(--carbonell-laranja); background:#fff; border-radius:50%;"
+                    title="Processando...">schedule</span>
+                {% elif arquivo.status == 'erro' %}
+                <span class="material-icons"
+                    style="position: absolute; top: -5px; right: -5px; color: var(--carbonell-vermelho); background:#fff; border-radius:50%;"
+                    title="Erro no processamento">error</span>
+                {% else %}
+                <span class="material-icons"
+                    style="position: absolute; top: -5px; right: -5px; color: var(--carbonell-verde); background:#fff; border-radius:50%;"
+                    title="Concluído">check_circle</span>
+                {% endif %}
+                <div class="file-icon-box">
+                    <span class="material-icons file-icon">picture_as_pdf</span>
                 </div>
-
-                <div class="tags-container">
-                    <span class="tag tag-segmento">{{ arquivo.segmento }}</span>
-                    {% if arquivo.integral %}
-                        <span class="tag" style="background:var(--carbonell-amarelo); color:#fff;">Integral</span>
-                    {% endif %}
-                    
-                    {% if arquivo.series %}
-                        {% for s in arquivo.series[:2] %}
-                            <span class="tag tag-serie">{{ s }}</span>
-                        {% endfor %}
-                    {% endif %}
-                </div>
-
-                <div class="file-card-actions">
-                    <a href="{{ url_for('admin_bp.editar_arquivo', doc_id=arquivo.id) }}" class="btn-icon btn-edit" title="Editar">
-                        <span class="material-icons">edit</span> Editar
-                    </a>
-                    
-                    <a href="{{ arquivo.url_download }}" target="_blank" class="btn-icon btn-edit" title="Baixar">
-                        <span class="material-icons">download</span>
-                    </a>
-
-                    <form action="{{ url_for('admin_bp.excluir_arquivo', doc_id=arquivo.id) }}" method="POST" style="flex: 1;" onsubmit="return confirm('Excluir este arquivo?');">
-                        <button type="submit" class="btn-icon btn-delete" style="width: 100%;">
-                            <span class="material-icons">delete</span> Excluir
-                        </button>
-                    </form>
+                <div class="file-details">
+                    <div class="file-title" title="{{ arquivo.nome_arquivo }}">
+                        {{ arquivo.nome_arquivo }}
+                    </div>
+                    <div class="file-date">
+                        <span class="material-icons" style="font-size: 14px;">calendar_today</span>
+                        {% if arquivo.criado_em %}
+                        {{ arquivo.criado_em.strftime('%d/%m/%Y') }}
+                        {% else %}
+                        --/--/----
+                        {% endif %}
+                    </div>
                 </div>
             </div>
-            {% endfor %}
+
+            <div class="tags-container">
+                <span class="tag tag-segmento">{{ arquivo.segmento }}</span>
+                {% if arquivo.integral %}
+                <span class="tag" style="background:var(--carbonell-amarelo); color:#fff;">Integral</span>
+                {% endif %}
+
+                {% if arquivo.series %}
+                {% for s in arquivo.series[:2] %}
+                <span class="tag tag-serie">{{ s }}</span>
+                {% endfor %}
+                {% endif %}
+            </div>
+
+            <div class="file-card-actions">
+                <a href="{{ url_for('admin_bp.editar_arquivo', doc_id=arquivo.id) }}" class="btn-icon btn-edit"
+                    title="Editar">
+                    <span class="material-icons">edit</span> Editar
+                </a>
+
+                <a href="{{ arquivo.url_download }}" target="_blank" class="btn-icon btn-edit" title="Baixar">
+                    <span class="material-icons">download</span>
+                </a>
+
+                <!-- Botão Visualizar (Novo) -->
+                <button class="btn-icon btn-edit" title="Visualizar" onclick="abrirModal('{{ arquivo.url_download }}')">
+                    <span class="material-icons">visibility</span>
+                </button>
+
+                <form action="{{ url_for('admin_bp.excluir_arquivo', doc_id=arquivo.id) }}" method="POST"
+                    style="flex: 1;" onsubmit="return confirm('Excluir este arquivo?');">
+                    <button type="submit" class="btn-icon btn-delete" style="width: 100%;">
+                        <span class="material-icons">delete</span> Excluir
+                    </button>
+                </form>
+            </div>
         </div>
-        
-        <div id="no-results" class="empty-state" style="display: none;">
-            <span class="material-icons empty-icon">search_off</span>
-            <h3>Nenhum arquivo encontrado.</h3>
-            <p>Tente ajustar os filtros de busca.</p>
-        </div>
+        {% endfor %}
+    </div>
+
+    <div id="no-results" class="empty-state" style="display: none;">
+        <span class="material-icons empty-icon">search_off</span>
+        <h3>Nenhum arquivo encontrado.</h3>
+        <p>Tente ajustar os filtros de busca.</p>
+    </div>
 
     {% else %}
-        <div class="empty-state">
-            <span class="material-icons empty-icon">cloud_off</span>
-            <h3>Nenhum comunicado cadastrado.</h3>
-            <p>Faça o upload do primeiro arquivo.</p>
-        </div>
+    <div class="empty-state">
+        <span class="material-icons empty-icon">cloud_off</span>
+        <h3>Nenhum comunicado cadastrado.</h3>
+        <p>Faça o upload do primeiro arquivo.</p>
+    </div>
     {% endif %}
 
 </div>
+</div>
+
+<!-- Modal de Visualização -->
+<div id="pdfModal"
+    style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; justify-content:center; align-items:center;">
+    <div
+        style="background:#fff; width:90%; height:90%; position:relative; border-radius:8px; display:flex; flex-direction:column;">
+        <div
+            style="padding:10px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center;">
+            <h3 style="margin:0;">Visualização do Arquivo</h3>
+            <button onclick="document.getElementById('pdfModal').style.display='none'"
+                style="background:none; border:none; font-size:1.5rem; cursor:pointer;">&times;</button>
+        </div>
+        <div style="flex:1; padding:10px;">
+            <iframe id="pdfFrame" src="" style="width:100%; height:100%; border:none;"></iframe>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}

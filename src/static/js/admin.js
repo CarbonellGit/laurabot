@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const fileNameDisplay = document.getElementById('file-name-display');
     const fileSizeDisplay = document.getElementById('file-size-display');
     const btnRemoveFile = document.getElementById('btn-remove-file');
-    
+
     // === Elementos de Filtro ===
     const radiosSegmento = document.querySelectorAll('input[name="segmento"]');
     const containerSeries = document.getElementById('container-series');
@@ -44,13 +44,13 @@ document.addEventListener('DOMContentLoaded', () => {
             handleFiles(dt.files);
         });
 
-        fileInput.addEventListener('change', function() {
+        fileInput.addEventListener('change', function () {
             handleFiles(this.files);
         });
 
         btnRemoveFile.addEventListener('click', (e) => {
             e.preventDefault(); e.stopPropagation();
-            fileInput.value = ''; 
+            fileInput.value = '';
             filePreview.style.display = 'none';
             dropZone.style.display = 'block';
         });
@@ -62,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     alert('Por favor, selecione apenas arquivos PDF.');
                     return;
                 }
-                try { fileInput.files = files; } catch(err) {}
+                try { fileInput.files = files; } catch (err) { }
                 fileNameDisplay.textContent = file.name;
                 fileSizeDisplay.textContent = formatBytes(file.size);
                 filePreview.style.display = 'flex';
@@ -81,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ------------------------------------------------------------------
     // 2. Lógica Dinâmica de Segmentação (Filtros)
     // ------------------------------------------------------------------
-    
+
     radiosSegmento.forEach(radio => {
         radio.addEventListener('change', (e) => {
             const segmento = e.target.value;
@@ -98,7 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
             containerSeries.style.display = 'none';
             containerPeriodo.style.display = 'none';
             containerTurma.style.display = 'none';
-            if(containerIntegral) containerIntegral.style.display = 'none';
+            if (containerIntegral) containerIntegral.style.display = 'none';
             return;
         }
 
@@ -107,9 +107,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (series.length > 0) {
             containerSeries.style.display = 'block';
             if (!manterSelecoes || listaSeries.children.length === 0) {
-                 listaSeries.innerHTML = ''; 
-                 criarCheckbox(listaSeries, 'series', 'TODAS', 'Todas as séries');
-                 series.forEach(s => criarCheckbox(listaSeries, 'series', s, s));
+                listaSeries.innerHTML = '';
+                criarCheckbox(listaSeries, 'series', 'TODAS', 'Todas as séries');
+                series.forEach(s => criarCheckbox(listaSeries, 'series', s, s));
             }
         }
 
@@ -117,14 +117,14 @@ document.addEventListener('DOMContentLoaded', () => {
         // Regra: EI e AI mostram Período e Integral. AF e EM não.
         if (['EI', 'AI'].includes(segmento)) {
             containerPeriodo.style.display = 'block';
-            if(containerIntegral) containerIntegral.style.display = 'block'; // Mostra Integral
+            if (containerIntegral) containerIntegral.style.display = 'block'; // Mostra Integral
         } else {
             containerPeriodo.style.display = 'none';
-            if(containerIntegral) {
+            if (containerIntegral) {
                 containerIntegral.style.display = 'none'; // Esconde Integral
                 // Opcional: Desmarcar o switch se mudar de segmento
                 const chk = document.getElementById('check-integral');
-                if(chk && !manterSelecoes) chk.checked = false;
+                if (chk && !manterSelecoes) chk.checked = false;
             }
         }
 
@@ -134,7 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function criarCheckbox(container, name, value, text) {
         const idExistente = `${name}-${value.replace(/[^a-zA-Z0-9]/g, '')}`;
-        if(document.getElementById(idExistente)) return;
+        if (document.getElementById(idExistente)) return;
 
         const div = document.createElement('div');
         div.className = 'checkbox-card';
@@ -170,15 +170,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!filterNome || !fileGrid) return; // Só executa na página de gerenciar
 
     const cards = Array.from(document.querySelectorAll('.file-card'));
-    
+
     // Atualiza o contador inicial
-    if(countVisible) countVisible.textContent = cards.length;
+    if (countVisible) countVisible.textContent = cards.length;
 
     function aplicarFiltros() {
         const termoNome = filterNome.value.toLowerCase();
         const segSelecionado = filterSegmento.value;
         const dataSelecionada = filterData.value; // Formato YYYY-MM-DD
-        
+
         let visiveis = 0;
 
         cards.forEach(card => {
@@ -222,10 +222,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (visiveis === 0) {
             fileGrid.style.display = 'none';
-            if(noResults) noResults.style.display = 'block';
+            if (noResults) noResults.style.display = 'block';
         } else {
             fileGrid.style.display = 'grid';
-            if(noResults) noResults.style.display = 'none';
+            if (noResults) noResults.style.display = 'none';
         }
     }
 
@@ -244,3 +244,44 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+/*
+ * 3. Polling de Status & Modal
+ */
+document.addEventListener('DOMContentLoaded', () => {
+    // === Polling ===
+    setInterval(() => {
+        const itensProcessando = document.querySelectorAll('.status-polling');
+        if (itensProcessando.length === 0) return;
+
+        itensProcessando.forEach(icon => {
+            const docId = icon.getAttribute('data-id');
+            fetch(`/admin/status/${docId}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.status === 'concluido') {
+                        icon.textContent = 'check_circle';
+                        icon.style.color = 'var(--carbonell-verde)';
+                        icon.classList.remove('status-polling');
+                        icon.title = "Concluído";
+                    } else if (data.status === 'erro') {
+                        icon.textContent = 'error';
+                        icon.style.color = 'var(--carbonell-vermelho)';
+                        icon.classList.remove('status-polling');
+                        icon.title = "Erro: " + data.msg;
+                    }
+                })
+                .catch(console.error);
+        });
+    }, 5000); // 5 segundos
+});
+
+// === Função Global para Modal ===
+window.abrirModal = function (url) {
+    const modal = document.getElementById('pdfModal');
+    const iframe = document.getElementById('pdfFrame');
+    if (modal && iframe) {
+        iframe.src = url;
+        modal.style.display = 'flex';
+    }
+}

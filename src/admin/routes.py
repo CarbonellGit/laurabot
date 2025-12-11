@@ -161,6 +161,26 @@ def gerenciar_arquivos():
         logger.error(f"Erro dashboard: {e}", exc_info=True)
         return redirect(url_for('admin_bp.dashboard'))
 
+@admin_bp.route('/status/<doc_id>')
+def check_status(doc_id):
+    """
+    Endpoint para Polling (Frontend verifica se terminou de processar).
+    Retorna JSON: { "status": "processando" | "concluido" | "erro" }
+    """
+    try:
+        doc_ref = db.collection(COLLECTION_COMUNICADOS).document(doc_id)
+        doc = doc_ref.get()
+        if not doc.exists:
+            return {"status": "erro", "msg": "Não encontrado"}, 404
+        
+        dados = doc.to_dict()
+        return {
+            "status": dados.get('status', 'processando'),
+            "msg": dados.get('erro_msg', '')
+        }
+    except Exception as e:
+        return {"status": "erro", "msg": str(e)}, 500
+
 @admin_bp.route('/upload')
 def upload_form():
     return render_template('admin/upload.html')
@@ -179,6 +199,19 @@ def upload_arquivo():
     # Validação do Arquivo (Filtro por Extensão)
     if not arquivo.filename.lower().endswith('.pdf'):
         flash("Apenas arquivos PDF são permitidos.", "error")
+        return redirect(url_for('admin_bp.upload_form'))
+
+    # Validação de Magic Numbers (Segurança)
+    try:
+        header = arquivo.read(4)
+        arquivo.seek(0) # IMPORTANTÍSSIMO: Resetar o ponteiro!
+        if header != b'%PDF':
+            flash("Arquivo inválido (Conteúdo não é PDF).", "error")
+            logger.warning(f"Upload rejeitado (Magic Number inválido): {arquivo.filename} por {user_email}")
+            return redirect(url_for('admin_bp.upload_form'))
+    except Exception as e:
+        logger.error(f"Erro ao ler header do arquivo: {e}")
+        flash("Erro ao validar arquivo.", "error")
         return redirect(url_for('admin_bp.upload_form'))
 
     user_email = session['user_profile']['email']

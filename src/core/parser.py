@@ -9,7 +9,7 @@ Responsável por:
 import json
 import re
 from io import BytesIO
-from pypdf import PdfReader
+import pdfplumber
 from src.core.logger import get_logger
 from src.core.ai import get_generative_model
 
@@ -17,32 +17,31 @@ logger = get_logger(__name__)
 
 def extrair_texto_pdf(arquivo_storage) -> str:
     """
-    Lê o PDF (objeto FileStorage ou BytesIO) e extrai todo o texto.
-    Retorna string vazia em caso de erro.
+    Lê o PDF e extrai texto preservando layout de tabelas via pdfplumber.
     """
     try:
-        # Lê o arquivo em memória
-        # Se for BytesIO (Thread), lê direto. Se for FileStorage (Flask), lê via .read()
+        # pdfplumber exige arquivo em disco ou objeto file-like (BytesIO)
         if isinstance(arquivo_storage, BytesIO):
-            pdf_bytes = arquivo_storage
+            pdf_file = arquivo_storage
         else:
-            pdf_bytes = BytesIO(arquivo_storage.read())
-            # Reseta ponteiro se for FileStorage, caso precise ser usado novamente
+            pdf_file = BytesIO(arquivo_storage.read())
             if hasattr(arquivo_storage, 'seek'):
                 arquivo_storage.seek(0)
 
-        reader = PdfReader(pdf_bytes)
         texto_completo = ""
-
-        for page in reader.pages:
-            texto_pag = page.extract_text()
-            if texto_pag:
-                texto_completo += texto_pag + "\n"
+        
+        with pdfplumber.open(pdf_file) as pdf:
+            for page in pdf.pages:
+                # extract_text(layout=True) tenta manter a posição visual (tabelas)
+                # x_tolerance e y_tolerance podem ser ajustados se necessário
+                texto_pag = page.extract_text(layout=True)
+                if texto_pag:
+                    texto_completo += texto_pag + "\n"
         
         return texto_completo.strip()
 
     except Exception as e:
-        logger.error(f"Erro ao extrair texto do PDF: {e}", exc_info=True)
+        logger.error(f"Erro no pdfplumber: {e}", exc_info=True)
         return ""
 
 def _analisar_regex_fallback(nome_arquivo: str) -> dict:
@@ -71,30 +70,36 @@ def _analisar_regex_fallback(nome_arquivo: str) -> dict:
 
 def analisar_metadados_ia(texto_completo: str, nome_arquivo: str) -> dict:
     """
-    Envia o início do texto do PDF para o Gemini identificar metadados.
-    Retorna um dicionário com: segmento, series, turmas, assunto.
+    Envia contexto para o Gemini identificar metadados.
+    Prompt otimizado para ignorar rodapés e textos repetitivos.
     """
     if not texto_completo:
         return _analisar_regex_fallback(nome_arquivo)
 
-    # Contexto limitado para economizar tokens
-    texto_analise = texto_completo[:2500]
+    # Aumentamos um pouco o contexto pois pdfplumber mantém layout (mais espaçado)
+    texto_analise = texto_completo[:3500]
 
     prompt = f"""
-    Analise o cabeçalho escolar e o texto abaixo extraído de um comunicado (PDF).
-    Retorne APENAS um objeto JSON válido (sem markdown) com as chaves:
+    ATENÇÃO: Você é um assistente administrativo escolar rigoroso.
+    Analise o comunicado abaixo e extraia as informações solicitadas.
     
-    - "segmento": Escolha UM entre ["EI", "AI", "AF", "EM", "TODOS"].
-    - "series": Lista de strings (ex: ["1º Ano", "5º Ano"]). Se o texto disser "AI/5A", entenda como "5º Ano".
-    - "turmas": Lista de strings (ex: ["A", "B"]). Se o texto disser "5A" ou "5º A", a turma é "A". Se não especificar, retorne [].
-    - "assunto": Um resumo curto do título/tema (máx 5 palavras).
+    REGRAS RÍGIDAS:
+    1. IGNORE rodapés (endereços, telefones, CNPJ, frases de marketing da escola).
+    2. Foco total em DATAS e PÚBLICO ALVO no cabeçalho ou corpo principal.
+    3. Se houver um calendário/tabela, tente entender a estrutura visual.
+    
+    Retorne APENAS um JSON válido com as chaves:
+    - "segmento": Escolha UM: ["EI", "AI", "AF", "EM", "TODOS"]. Se mencionar várias fases, use "TODOS".
+    - "series": Lista de strings ex: ["1º Ano", "9º Ano"]. Se for para toda a escola/unidade, retorne [].
+    - "turmas": Lista de strings ex: ["A", "B"]. Se não for específico de turma, [].
+    - "assunto": Máx 5 palavras. Resumo objetivo do tema central.
 
-    Texto do arquivo ({nome_arquivo}):
+    Arquivo: {nome_arquivo}
+    Texto Extraído:
     "{texto_analise}..."
     """
 
     try:
-        # Usa a factory centralizada do src/core/ai.py
         model = get_generative_model()
         response = model.generate_content(prompt)
         raw_text = response.text.strip()
