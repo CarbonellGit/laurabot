@@ -18,6 +18,7 @@ from . import services as auth_services
 from . import auth_bp  
 from src.core.oauth import oauth
 from src.core.database import db
+from .forms import CadastroAlunosForm
 
 # === ROTAS DE LOGIN/LOGOUT (RF-001) ===
 
@@ -86,80 +87,70 @@ def cadastro_alunos():
     if session['user_profile'].get('possui_cadastro_filhos', False):
         return redirect(url_for('chat_bp.index'))
 
-    return render_template('cadastro_alunos.html')
+    # Inicializa o form (necessário para o CSRF token)
+    form = CadastroAlunosForm()
+    return render_template('cadastro_alunos.html', form=form)
 
 
 @auth_bp.route('/salvar-estudantes', methods=['POST'])
 def salvar_estudantes():
     """
-    RF-005: Processa, higieniza e salva os dados dos estudantes no Firestore.
-    Inclui lógica para o campo 'Integral'.
+    RF-005: Processa, valida e salva os dados dos estudantes usando WTForms.
     """
     if 'user_profile' not in session:
         return redirect(url_for('auth_bp.login'))
 
-    # O formulário envia dados no formato: estudantes[0][nome], estudantes[0][segmento], etc.
-    raw_form = request.form
-    estudantes_processados = []
+    form = CadastroAlunosForm()
     
-    # 1. Identifica quais índices (0, 1, 2...) foram enviados
-    indices = set()
-    for key in raw_form.keys():
-        if key.startswith('estudantes['):
-            # Extrai o número entre colchetes
-            match = re.search(r'estudantes\[(\d+)\]', key)
-            if match:
-                indices.add(int(match.group(1)))
+    # Valida o formulário completo
+    if form.validate_on_submit():
+        estudantes_processados = []
+        
+        for estudante_form in form.estudantes:
+            # WTForms já validou os tipos e required
+            dados = {
+                'nome': estudante_form.nome.data.strip().title(),
+                'segmento': estudante_form.segmento.data,
+                'serie': estudante_form.serie.data,
+                'periodo': estudante_form.periodo.data,
+                'turma': estudante_form.turma.data,
+                'integral': estudante_form.integral.data
+            }
+            estudantes_processados.append(dados)
+
+        if not estudantes_processados:
+             return "Erro: Nenhum estudante enviado.", 400
+
+        # --- Salvamento no Firestore ---
+        try:
+            user_email = session['user_profile']['email']
+            
+            # Atualiza o documento do responsável
+            doc_ref = db.collection('responsaveis').document(user_email)
+            
+            doc_ref.update({
+                'filhos': estudantes_processados, 
+                'possui_cadastro_filhos': True,
+                'ano_ultima_atualizacao': 2025
+            })
+            
+            # Atualiza a sessão local
+            session['user_profile']['possui_cadastro_filhos'] = True
+            session['user_profile']['filhos'] = estudantes_processados
+            session.modified = True 
+
+            return redirect(url_for('chat_bp.index'))
+
+        except Exception as e:
+            print(f"Erro ao salvar estudantes: {e}")
+            return f"Erro ao salvar: {e}", 500
     
-    # 2. Processa cada estudante encontrado
-    for i in sorted(indices):
-        nome_raw = raw_form.get(f'estudantes[{i}][nome]', '')
-        
-        # --- Higienização ---
-        nome_limpo = nome_raw.strip().title()
-        
-        # --- Campo Integral ---
-        # Checkbox HTML: se marcado envia 'on', se não marcado não envia nada (None)
-        integral_check = raw_form.get(f'estudantes[{i}][integral]')
-        is_integral = True if integral_check == 'on' else False
-
-        estudante = {
-            'nome': nome_limpo,
-            'segmento': raw_form.get(f'estudantes[{i}][segmento]'),
-            'serie': raw_form.get(f'estudantes[{i}][serie]'),
-            'periodo': raw_form.get(f'estudantes[{i}][periodo]'),
-            'turma': raw_form.get(f'estudantes[{i}][turma]'),
-            'integral': is_integral  # Novo campo salvo no banco
-        }
-        estudantes_processados.append(estudante)
-
-    # Validamos se temos pelo menos um estudante
-    if not estudantes_processados:
-        return "Erro: Nenhum estudante enviado.", 400
-
-    # --- Salvamento no Firestore ---
-    try:
-        user_email = session['user_profile']['email']
-        
-        # Atualiza o documento do responsável
-        doc_ref = db.collection('responsaveis').document(user_email)
-        
-        doc_ref.update({
-            'filhos': estudantes_processados, 
-            'possui_cadastro_filhos': True,
-            'ano_ultima_atualizacao': 2025 # Define o ano corrente (RF-007.1)
-        })
-        
-        # Atualiza a sessão local também para não precisar relogar
-        session['user_profile']['possui_cadastro_filhos'] = True
-        session['user_profile']['filhos'] = estudantes_processados
-        session.modified = True 
-
-        return redirect(url_for('chat_bp.index'))
-
-    except Exception as e:
-        print(f"Erro ao salvar estudantes: {e}")
-        return f"Erro ao salvar: {e}", 500
+    else:
+        # Se falhar na validação, retorna erros
+        # Idealmente, renderizaria o template com os erros, 
+        # mas como é dinâmico via JS, vamos retornar erro 400 por enquanto
+        # ou redirecionar com flash.
+        return f"Erro de Validação: {form.errors}", 400
     
 @auth_bp.route('/perfil')
 def perfil():
@@ -180,4 +171,6 @@ def perfil():
     else:
         estudantes = []
 
-    return render_template('perfil.html', estudantes=estudantes)
+    # Passamos o form vazio apenas para gerar o CSRF Token
+    form = CadastroAlunosForm()
+    return render_template('perfil.html', estudantes=estudantes, form=form)

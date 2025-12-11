@@ -19,6 +19,7 @@
         </header>
 
         <form id="form-cadastro" action="{{ url_for('auth_bp.salvar_estudantes') }}" method="POST">
+            {{ form.csrf_token }}
 
             <div id="lista-estudantes">
             </div>
@@ -52,7 +53,7 @@
         <div class="form-grid">
             <div class="form-group span-full">
                 <label>Nome do Estudante</label>
-                <input class="input-nome" type="text" name="estudantes[{index}][nome]" placeholder="Ex: Maria da Silva"
+                <input class="input-nome" type="text" name="estudantes-{index}-nome" placeholder="Ex: Maria da Silva"
                     minlength="3" pattern="[A-Za-zÀ-ÖØ-öø-ÿ\s\.]+" required>
                 <small class="input-help">Digite o nome completo.</small>
             </div>
@@ -60,7 +61,7 @@
             <div class="form-group">
                 <label>Segmento</label>
                 <div class="select-wrapper">
-                    <select name="estudantes[{index}][segmento]" class="select-segmento" required>
+                    <select name="estudantes-{index}-segmento" class="select-segmento" required>
                         <option value="" disabled selected>Selecione...</option>
                         <option value="EI">Educação Infantil</option>
                         <option value="AI">Anos Iniciais (1º ao 5º)</option>
@@ -73,7 +74,7 @@
             <div class="form-group">
                 <label>Série/Ano</label>
                 <div class="select-wrapper">
-                    <select name="estudantes[{index}][serie]" class="select-serie" disabled required>
+                    <select name="estudantes-{index}-serie" class="select-serie" disabled required>
                         <option value="" disabled selected>Selecione o segmento...</option>
                     </select>
                 </div>
@@ -82,16 +83,16 @@
             <div class="form-group">
                 <label>Período</label>
                 <div class="select-wrapper">
-                    <select name="estudantes[{index}][periodo]" class="select-periodo" disabled required>
+                    <select name="estudantes-{index}-periodo" class="select-periodo" disabled required>
                         <option value="" disabled selected>Selecione o segmento...</option>
                     </select>
                 </div>
             </div>
-            
+
             <div class="form-group">
                 <label>Turma</label>
                 <div class="select-wrapper">
-                    <select name="estudantes[{index}][turma]" class="select-turma" disabled required>
+                    <select name="estudantes-{index}-turma" class="select-turma" disabled required>
                         <option value="" disabled selected>Selecione...</option>
                     </select>
                 </div>
@@ -103,7 +104,7 @@
                     <div class="integral-desc">Marque se o aluno fica no colégio em período integral.</div>
                 </div>
                 <label class="switch">
-                    <input type="checkbox" name="estudantes[{index}][integral]" class="check-integral">
+                    <input type="checkbox" name="estudantes-{index}-integral" class="check-integral">
                     <span class="slider"></span>
                 </label>
             </div>

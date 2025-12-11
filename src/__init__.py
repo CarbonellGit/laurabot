@@ -4,11 +4,14 @@ Módulo Principal da Aplicação (Application Factory)
 
 from flask import Flask
 from werkzeug.middleware.proxy_fix import ProxyFix # Importação necessária para o Cloud Run
+from flask_wtf.csrf import CSRFProtect # Proteção contra CSRF
 from config import Config
 
 # Importa a instância do oauth
 from .core.constants import DADOS_ESCOLA
 from .core.oauth import oauth
+
+csrf = CSRFProtect()
 
 def create_app(config_class=Config):
     """
@@ -28,6 +31,9 @@ def create_app(config_class=Config):
 
     # 1. Carrega a configuração
     app.config.from_object(config_class)
+
+    # Inicializa CSRF globalmente
+    csrf.init_app(app)
 
     # 2. Inicializa o Authlib
     oauth.init_app(app)

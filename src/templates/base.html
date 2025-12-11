@@ -1,9 +1,12 @@
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
+
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
     <title>{% block title %}LauraBot - Comunicados{% endblock %}</title>
 
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
@@ -11,6 +14,7 @@
 
     {% block head_styles %}{% endblock %}
 </head>
+
 <body>
 
     <div id="global-loader" class="loader-overlay" style="display: none;">
@@ -18,25 +22,25 @@
     </div>
 
     <div class="app-wrapper">
-        
+
         {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <div class="flash-container">
-                    {% for category, message in messages %}
-                        <div class="alert alert-{{ category }}">
-                            <span class="material-icons alert-icon">
-                                {% if category == 'success' %}check_circle
-                                {% elif category == 'error' %}error
-                                {% else %}info{% endif %}
-                            </span>
-                            <span class="alert-text">{{ message }}</span>
-                            <button type="button" class="alert-close" onclick="this.parentElement.remove()">
-                                <span class="material-icons">close</span>
-                            </button>
-                        </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
+        {% if messages %}
+        <div class="flash-container">
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">
+                <span class="material-icons alert-icon">
+                    {% if category == 'success' %}check_circle
+                    {% elif category == 'error' %}error
+                    {% else %}info{% endif %}
+                </span>
+                <span class="alert-text">{{ message }}</span>
+                <button type="button" class="alert-close" onclick="this.parentElement.remove()">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
         {% endwith %}
 
         <main class="main-content">
@@ -50,10 +54,11 @@
         // O uso de aspas simples e JSON.parse evita erros de sintaxe no editor (VS Code)
         const DADOS_ESCOLA = JSON.parse('{{ DADOS_ESCOLA_GLOBAL | tojson | safe }}');
     </script>
-    
+
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
-    
+
     {% block scripts %}{% endblock %}
 </body>
+
 </html>

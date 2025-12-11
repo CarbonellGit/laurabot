@@ -67,7 +67,7 @@ def _tarefa_processamento_background(app, doc_id, nome_blob, url_download, nome_
             print("📄 [THREAD] Extraindo texto...")
             texto_extraido = parser.extrair_texto_pdf(arquivo_bytes)
             if not texto_extraido:
-                raise Exception("OCR retornou texto vazio.")
+                raise ValueError("OCR retornou texto vazio ou PDF ilegível.")
 
             # 3. Inteligência Artificial
             print("🤖 [THREAD] Consultando Gemini...")
@@ -131,13 +131,15 @@ def _tarefa_processamento_background(app, doc_id, nome_blob, url_download, nome_
             traceback.print_exc() # Imprime erro completo no terminal
             logger.error(f"[BG] Erro ao processar {doc_id}: {e}", exc_info=True)
             
+            # Tenta atualizar o status para erro no Firestore
             try:
-                db.collection(COLLECTION_COMUNICADOS).document(doc_id).update({
-                    'status': 'erro',
-                    'erro_msg': err_msg
-                })
-            except:
-                pass
+                if db:
+                    db.collection(COLLECTION_COMUNICADOS).document(doc_id).update({
+                        'status': 'erro',
+                        'erro_msg': f"Falha no processamento: {err_msg}"
+                    })
+            except Exception as db_err:
+                 logger.critical(f"Falha ao salvar status de erro no DB: {db_err}")
 
 # === ROTAS ===
 
@@ -172,6 +174,11 @@ def upload_arquivo():
     arquivo = request.files['arquivo']
     if arquivo.filename == '':
         flash("Nome vazio.", "error")
+        return redirect(url_for('admin_bp.upload_form'))
+
+    # Validação do Arquivo (Filtro por Extensão)
+    if not arquivo.filename.lower().endswith('.pdf'):
+        flash("Apenas arquivos PDF são permitidos.", "error")
         return redirect(url_for('admin_bp.upload_form'))
 
     user_email = session['user_profile']['email']

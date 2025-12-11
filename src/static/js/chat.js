@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // 1. Mostra msg do usuário
         const userMsgDiv = createMessageElement('user');
         userMsgDiv.innerText = text;
-        
+
         userInput.value = '';
         userInput.disabled = true;
         scrollToBottom();
@@ -32,11 +32,18 @@ document.addEventListener('DOMContentLoaded', () => {
             // 2. Prepara o container da resposta do Bot (Vazio por enquanto)
             const botMsgDiv = createMessageElement('bot');
             let botTextAcumulado = "";
-            
-            // 3. Inicia o Request
+
+            // === NOVO: Recupera o token CSRF da meta tag ===
+            const csrfTokenMeta = document.querySelector('meta[name="csrf-token"]');
+            const csrfToken = csrfTokenMeta ? csrfTokenMeta.getAttribute('content') : '';
+
+            // 3. Inicia o Request (AGORA COM O HEADER DE SEGURANÇA)
             const response = await fetch('/enviar', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken // <--- Envia o token para o servidor
+                },
                 body: JSON.stringify({ message: text })
             });
 
@@ -56,8 +63,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Renderiza Markdown em tempo real
                 // (Isso permite que negritos e listas apareçam conforme o texto chega)
-                botMsgDiv.innerHTML = marked.parse(botTextAcumulado);
-                
+                if (typeof marked !== 'undefined') {
+                    botMsgDiv.innerHTML = marked.parse(botTextAcumulado);
+                } else {
+                    botMsgDiv.innerText = botTextAcumulado;
+                }
+
                 scrollToBottom();
             }
 
@@ -76,14 +87,18 @@ document.addEventListener('DOMContentLoaded', () => {
     userInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') sendMessage();
     });
-    
+
     // Renderiza markdown das mensagens antigas (se houver) ao carregar
     document.querySelectorAll('.message-bot').forEach(el => {
         // Verifica se já não foi renderizado (para evitar duplo parse)
         if (!el.querySelector('p') && !el.querySelector('ul')) {
-             el.innerHTML = marked.parse(el.innerText);
+            if (typeof marked !== 'undefined') {
+                // Pega o texto cru, se estiver escondido em um elemento específico ou direto no innerText
+                const rawText = el.innerText;
+                el.innerHTML = marked.parse(rawText);
+            }
         }
     });
-    
+
     scrollToBottom();
 });
