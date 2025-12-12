@@ -50,7 +50,7 @@ def restringir_acesso():
 
 # === TAREFA EM BACKGROUND (WORKER) ===
 
-def _tarefa_processamento_background(app, doc_id, nome_blob, url_download, nome_arquivo, dados_manuais):
+def _tarefa_processamento_background(app, doc_id, nome_blob, url_download_placeholder, nome_arquivo, dados_manuais):
     """
     Executa o processamento pesado.
     Usa 'nome_blob' para download seguro.
@@ -98,7 +98,7 @@ def _tarefa_processamento_background(app, doc_id, nome_blob, url_download, nome_
             print("🧠 [THREAD] Salvando no Pinecone...")
             metadados_vetor = {
                 'nome_arquivo': nome_arquivo,
-                'url_download': url_download,
+                'url_download': nome_blob, # AGORA SALVAMOS O BLOB NAME (ID)
                 'segmento': segmento,
                 'series': series,
                 'periodos': dados_manuais['periodos'],
@@ -155,6 +155,18 @@ def gerenciar_arquivos():
         for doc in docs_ref:
             dados = doc.to_dict()
             dados['id'] = doc.id
+            
+            # GERA SIGNED URL DINAMICAMENTE
+            if dados.get('url_download'):
+                # Assumindo que url_download agora guarda o nome_blob (ID)
+                # Se for URL antiga, o generate_signed_url deve falhar ou o storage.delete_file deve tratar (no delete já tratamos)
+                # Vamos tentar gerar. Se falhar, fica vazio.
+                signed_url = storage.generate_signed_url(dados['url_download'])
+                if signed_url:
+                    dados['url_visualizacao'] = signed_url
+                else:
+                    dados['url_visualizacao'] = "#"
+            
             arquivos.append(dados)
         return render_template('admin/gerenciar.html', arquivos=arquivos)
     except Exception as e:
@@ -207,6 +219,8 @@ def upload_arquivo():
         arquivo.seek(0) # IMPORTANTÍSSIMO: Resetar o ponteiro!
         if header != b'%PDF':
             flash("Arquivo inválido (Conteúdo não é PDF).", "error")
+            user_profile = session.get('user_profile', {})
+            user_email = user_profile.get('email', 'unknown')
             logger.warning(f"Upload rejeitado (Magic Number inválido): {arquivo.filename} por {user_email}")
             return redirect(url_for('admin_bp.upload_form'))
     except Exception as e:
@@ -217,8 +231,10 @@ def upload_arquivo():
     user_email = session['user_profile']['email']
 
     try:
-        # 1. Upload Rápido (Retorna URL e NOME DO BLOB)
-        url_publica, nome_blob = storage.upload_file(arquivo, arquivo.filename)
+        # 1. Upload Seguro (Retorna NOME DO BLOB apenas)
+        nome_blob_1, nome_blob_2 = storage.upload_file(arquivo, arquivo.filename)
+        nome_blob = nome_blob_1 # Ambos são iguais agora
+        
         doc_id = limpar_nome_para_id(arquivo.filename)
         
         # 2. Dados Manuais
@@ -231,9 +247,11 @@ def upload_arquivo():
         }
 
         # 3. Placeholder no Firestore
+        # IMPORTANTE: Salvamos 'nome_blob' no campo 'url_download' para manter compatibilidade de chave
+        # mas semanticamente agora é um ID interno.
         metadados_iniciais = {
             'nome_arquivo': arquivo.filename,
-            'url_download': url_publica,
+            'url_download': nome_blob, 
             'status': 'processando', 
             'criado_por': user_email,
             'criado_em': firestore.SERVER_TIMESTAMP,
@@ -246,8 +264,8 @@ def upload_arquivo():
         app_real = current_app._get_current_object()
         thread = threading.Thread(
             target=_tarefa_processamento_background,
-            # Passamos nome_blob aqui v
-            args=(app_real, doc_id, nome_blob, url_publica, arquivo.filename, dados_manuais)
+            # Passamos nome_blob
+            args=(app_real, doc_id, nome_blob, nome_blob, arquivo.filename, dados_manuais)
         )
         thread.start()
 

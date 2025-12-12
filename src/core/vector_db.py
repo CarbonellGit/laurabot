@@ -116,9 +116,84 @@ def buscar_documentos(query: str, filtro_segmentos: list = None, top_k=4) -> lis
         logger.error(f"Erro na busca: {e}", exc_info=True)
         return []
 
-def gerar_resposta_ia_stream(pergunta: str, contextos: list, historico: list = [], perfil_usuario: dict = {}):
+from typing import Generator, List, Dict, Any, Set
+import re
+from src.core.storage import generate_signed_url
+
+def _stream_com_verificacao_links(generator_response, urls_permitidas: Set[str]) -> Generator[str, None, None]:
     """
-    Gera resposta em STREAM (Yield) com Prompt Refinado para evitar links indesejados.
+    Filtra o stream de texto para garantir que apenas links permitidos sejam exibidos.
+    Substitui links alucinados por [Link não verificado].
+    """
+    buffer = ""
+    # Regex para capturar links Markdown completos: [Texto](URL)
+    # A captura é feita em partes para permitir streaming
+    
+    for chunk in generator_response:
+        text_chunk = chunk.text if hasattr(chunk, 'text') else str(chunk)
+        if not text_chunk: continue
+        
+        buffer += text_chunk
+        
+        while True:
+            # Procura por início de link '['
+            start_link = buffer.find('[')
+            if start_link == -1:
+                # Não há inicio de link, podemos enviar tudo
+                yield buffer
+                buffer = ""
+                break
+            
+            # Se achou '[', imprime até ele
+            yield buffer[:start_link]
+            buffer = buffer[start_link:]
+            
+            # Agora buffer começa com '[', tenta achar o fim do link ')'
+            # Cuidado com links aninhados ou falsos, simplificando para o primeiro ')' após ']('
+            match = re.match(r'\[([^\]]+)\]\(([^)]+)\)', buffer)
+            
+            if match:
+                # Temos um link completo
+                texto_link = match.group(1)
+                url_link = match.group(2)
+                full_match = match.group(0)
+                
+                # Validação
+                if url_link in urls_permitidas:
+                    yield full_match
+                else:
+                    # Alucinação detectada ou link inválido
+                    yield f"[{texto_link}](Link não verificado)"
+                    
+                # Remove o link processado do buffer
+                buffer = buffer[len(full_match):]
+            else:
+                # Link incompleto ou apenas um bracket solto
+                # Precisamos saber se é um link sendo formado ou não.
+                # Se o buffer está muito grande e não fechou link, provavelmente não é link.
+                # Mas para segurança do stream, vamos segurar apenas se parecer que está formando um link.
+                
+                # Casos: "[", "[Texto", "[Texto](", "[Texto](Url"
+                
+                # Se tivermos ']' e '(' depois mas sem ')', segura.
+                # Se não tivermos ']' ainda, segura.
+                
+                # Limitador de buffer para evitar travar em caso de brackets soltos sem link
+                if len(buffer) > 500: # Link muito longo ou falso positivo
+                     yield buffer[0] # Solta o '[' e reprocessa o resto
+                     buffer = buffer[1:]
+                     continue
+                
+                # Sai do while para pegar mais chunks e completar o link
+                break
+    
+    # Yield o que sobrou no buffer
+    if buffer:
+        yield buffer
+
+def gerar_resposta_ia_stream(pergunta: str, contextos: list, historico: list = [], perfil_usuario: dict = {}) -> Generator[str, None, None]:
+    """
+    Gera resposta em STREAM (Yield) com Prompt Refinado e Guardrails de Links.
     """
     model = get_generative_model()
     
@@ -130,13 +205,29 @@ def gerar_resposta_ia_stream(pergunta: str, contextos: list, historico: list = [
 
     texto_historico = "HISTÓRICO:\n"
     for msg in historico:
-        role = "Usuário" if msg['role'] == 'user' else "Bot"
-        texto_historico += f"{role}: {msg['content'][:300]}\n"
+        # Previne erro se content for None
+        content = msg.get('content', '')
+        if content:
+            role = "Usuário" if msg.get('role') == 'user' else "Bot"
+            texto_historico += f"{role}: {content[:300]}\n"
 
     texto_docs = ""
+    urls_validas = set()
+
     if contextos:
         for doc in contextos:
-            texto_docs += f"\n--- FONTE: {doc['fonte']} ({doc['link']}) ---\n{doc['conteudo']}\n"
+            # doc['link'] traz o blob_name (ID interno) do Pinecone
+            blob_name = doc.get('link')
+            link_display = "#"
+            
+            if blob_name and blob_name != "#":
+                # Gera Signed URL válida para este contexto
+                signed_url = generate_signed_url(blob_name)
+                if signed_url:
+                    link_display = signed_url
+                    urls_validas.add(signed_url)
+            
+            texto_docs += f"\n--- FONTE: {doc['fonte']} ({link_display}) ---\n{doc['conteudo']}\n"
     else:
         texto_docs = "Nenhum documento encontrado."
 
@@ -158,15 +249,16 @@ def gerar_resposta_ia_stream(pergunta: str, contextos: list, historico: list = [
     2. Se a informação solicitada NÃO estiver nos documentos, diga educadamente: "Não encontrei essa informação nos comunicados recentes."
     3. REGRA DE OURO SOBRE LINKS:
        - SE e SOMENTE SE você encontrou a resposta no documento, cite a fonte no final usando o formato: [Nome do Arquivo](Link).
-       - SE você não encontrou a resposta ou se a resposta for negativa (ex: "não há informações"), NÃO COLOQUE NENHUM LINK OU CITAÇÃO.
-       - Nunca invente links.
+       - O Link DEVE ser EXATAMENTE um dos links listados nas FONTES acima.
+       - NÃO altere, não encurte e não invente links. Copie e cole.
     """
 
     try:
         response = model.generate_content(prompt_sistema, stream=True)
-        for chunk in response:
-            if chunk.text:
-                yield chunk.text
+        
+        # Passa pelo verificador de links antes de entregar ao usuário
+        for chunk_verificado in _stream_com_verificacao_links(response, urls_validas):
+            yield chunk_verificado
 
     except Exception as e:
         logger.error(f"Erro na geração stream: {e}", exc_info=True)

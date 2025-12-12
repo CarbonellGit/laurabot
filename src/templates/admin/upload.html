@@ -9,9 +9,10 @@
 
 {% block content %}
 <div class="admin-container">
-    
+
     <div style="margin-bottom: 1rem;">
-        <a href="{{ url_for('admin_bp.dashboard') }}" style="text-decoration: none; color: var(--carbonell-azul-escuro); display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 600;">
+        <a href="{{ url_for('admin_bp.dashboard') }}"
+            style="text-decoration: none; color: var(--carbonell-azul-escuro); display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 600;">
             <span class="material-icons">arrow_back</span> Voltar ao Dashboard
         </a>
     </div>
@@ -22,17 +23,21 @@
             <p style="opacity: 0.9;">Envie o PDF e defina o público alvo.</p>
         </header>
 
-        <form action="{{ url_for('admin_bp.upload_arquivo') }}" method="POST" enctype="multipart/form-data" class="admin-content">
-            
+        <form action="{{ url_for('admin_bp.upload_arquivo') }}" method="POST" enctype="multipart/form-data"
+            class="admin-content">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
             <div id="drop-zone" class="upload-zone">
                 <span class="material-icons upload-icon">cloud_upload</span>
                 <h3 class="upload-text">Arraste e solte o PDF aqui</h3>
                 <p class="upload-hint">ou clique para selecionar do computador</p>
-                <input type="file" name="arquivo" id="file-upload" accept="application/pdf" style="display: none;" required>
+                <input type="file" name="arquivo" id="file-upload" accept="application/pdf" style="display: none;"
+                    required>
             </div>
 
             <div id="file-preview" class="file-selected" style="display: none;">
-                <span class="material-icons" style="color: var(--carbonell-azul-escuro); font-size: 2rem;">picture_as_pdf</span>
+                <span class="material-icons"
+                    style="color: var(--carbonell-azul-escuro); font-size: 2rem;">picture_as_pdf</span>
                 <div class="file-info">
                     <span id="file-name-display" class="file-name">arquivo.pdf</span>
                     <span id="file-size-display" class="file-size">0 MB</span>
@@ -52,31 +57,39 @@
                 <div class="segment-grid">
                     <div class="checkbox-card">
                         <input type="radio" name="segmento" id="seg-todos" value="TODOS" required>
-                        <label class="checkbox-label" for="seg-todos">TODOS <span class="checkbox-sublabel">Escola inteira</span></label>
+                        <label class="checkbox-label" for="seg-todos">TODOS <span class="checkbox-sublabel">Escola
+                                inteira</span></label>
                     </div>
                     <div class="checkbox-card">
                         <input type="radio" name="segmento" id="seg-ei" value="EI">
-                        <label class="checkbox-label" for="seg-ei">EI <span class="checkbox-sublabel">Ed. Infantil</span></label>
+                        <label class="checkbox-label" for="seg-ei">EI <span class="checkbox-sublabel">Ed.
+                                Infantil</span></label>
                     </div>
                     <div class="checkbox-card">
                         <input type="radio" name="segmento" id="seg-ai" value="AI">
-                        <label class="checkbox-label" for="seg-ai">AI <span class="checkbox-sublabel">Anos Iniciais</span></label>
+                        <label class="checkbox-label" for="seg-ai">AI <span class="checkbox-sublabel">Anos
+                                Iniciais</span></label>
                     </div>
                     <div class="checkbox-card">
                         <input type="radio" name="segmento" id="seg-af" value="AF">
-                        <label class="checkbox-label" for="seg-af">AF <span class="checkbox-sublabel">Anos Finais</span></label>
+                        <label class="checkbox-label" for="seg-af">AF <span class="checkbox-sublabel">Anos
+                                Finais</span></label>
                     </div>
                     <div class="checkbox-card">
                         <input type="radio" name="segmento" id="seg-em" value="EM">
-                        <label class="checkbox-label" for="seg-em">EM <span class="checkbox-sublabel">Ensino Médio</span></label>
+                        <label class="checkbox-label" for="seg-em">EM <span class="checkbox-sublabel">Ensino
+                                Médio</span></label>
                     </div>
                 </div>
 
                 <div id="container-integral" style="display: none; margin-top: 1.5rem; animation: slideDown 0.3s ease;">
-                     <div style="background-color: #f0f7ff; border: 1px dashed var(--carbonell-azul-escuro); border-radius: 8px; padding: 1rem; display: flex; align-items: center; gap: 1rem;">
+                    <div
+                        style="background-color: #f0f7ff; border: 1px dashed var(--carbonell-azul-escuro); border-radius: 8px; padding: 1rem; display: flex; align-items: center; gap: 1rem;">
                         <div style="flex: 1;">
-                            <strong style="color: var(--carbonell-azul-escuro); display: block;">Comunicado Exclusivo para o Integral?</strong>
-                            <small style="color: #666;">Se marcado, este arquivo será priorizado para alunos do integral.</small>
+                            <strong style="color: var(--carbonell-azul-escuro); display: block;">Comunicado Exclusivo
+                                para o Integral?</strong>
+                            <small style="color: #666;">Se marcado, este arquivo será priorizado para alunos do
+                                integral.</small>
                         </div>
                         <label class="switch">
                             <input type="checkbox" name="integral" id="check-integral">
@@ -86,8 +99,10 @@
                 </div>
 
                 <div id="container-series" style="display: none; margin-top: 1.5rem; animation: slideDown 0.3s ease;">
-                    <p style="margin-bottom: 0.5rem; font-size: 0.9rem; font-weight: 600;">Selecione as Séries (Opcional):</p>
-                    <div id="lista-series" class="segment-grid" style="grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));"></div>
+                    <p style="margin-bottom: 0.5rem; font-size: 0.9rem; font-weight: 600;">Selecione as Séries
+                        (Opcional):</p>
+                    <div id="lista-series" class="segment-grid"
+                        style="grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));"></div>
                 </div>
 
                 <div id="container-periodo" style="display: none; margin-top: 1.5rem; animation: slideDown 0.3s ease;">
@@ -105,7 +120,8 @@
                 </div>
 
                 <div id="container-turma" style="display: none; margin-top: 1.5rem; animation: slideDown 0.3s ease;">
-                    <p style="margin-bottom: 0.5rem; font-size: 0.9rem; font-weight: 600;">Turmas Específicas (Opcional):</p>
+                    <p style="margin-bottom: 0.5rem; font-size: 0.9rem; font-weight: 600;">Turmas Específicas
+                        (Opcional):</p>
                     <div class="segment-grid" style="grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));">
                         <div class="checkbox-card">
                             <input type="checkbox" name="turma" id="turma-a" value="A">

@@ -9,13 +9,14 @@ Responsável por:
 import json
 import re
 from io import BytesIO
+from typing import Dict, Any, Union, List, Optional
 import pdfplumber
 from src.core.logger import get_logger
 from src.core.ai import get_generative_model
 
 logger = get_logger(__name__)
 
-def extrair_texto_pdf(arquivo_storage) -> str:
+def extrair_texto_pdf(arquivo_storage: Union[BytesIO, Any]) -> str:
     """
     Lê o PDF e extrai texto preservando layout de tabelas via pdfplumber.
     """
@@ -44,11 +45,11 @@ def extrair_texto_pdf(arquivo_storage) -> str:
         logger.error(f"Erro no pdfplumber: {e}", exc_info=True)
         return ""
 
-def _analisar_regex_fallback(nome_arquivo: str) -> dict:
+def _analisar_regex_fallback(nome_arquivo: str) -> Dict[str, Any]:
     """
     Fallback: Tenta extrair metadados básicos via Regex se a IA falhar.
     """
-    tags = {
+    tags: Dict[str, Any] = {
         'segmento': 'TODOS', 
         'series': [], 
         'turmas': [],
@@ -68,7 +69,7 @@ def _analisar_regex_fallback(nome_arquivo: str) -> dict:
         
     return tags
 
-def analisar_metadados_ia(texto_completo: str, nome_arquivo: str) -> dict:
+def analisar_metadados_ia(texto_completo: str, nome_arquivo: str) -> Dict[str, Any]:
     """
     Envia contexto para o Gemini identificar metadados.
     Prompt otimizado para ignorar rodapés e textos repetitivos.

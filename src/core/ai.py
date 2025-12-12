@@ -2,12 +2,13 @@
 Configuração Centralizada de IA (GenAI).
 Evita re-configuração e importações repetidas.
 """
+from typing import Any
 import google.generativeai as genai
 from flask import current_app
 
-_configurado = False
+_configurado: bool = False
 
-def configurar_genai():
+def configurar_genai() -> None:
     """
     Configura a API Key do Gemini uma única vez.
     """
@@ -22,10 +23,10 @@ def configurar_genai():
     genai.configure(api_key=api_key)
     _configurado = True
 
-def get_embedding_model():
+def get_embedding_model() -> str:
     configurar_genai()
     return "models/text-embedding-004"
 
-def get_generative_model():
+def get_generative_model() -> genai.GenerativeModel:
     configurar_genai()
     return genai.GenerativeModel('gemini-2.5-flash')
