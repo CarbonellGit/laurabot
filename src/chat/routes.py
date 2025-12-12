@@ -18,6 +18,7 @@ from flask import (
     stream_with_context
 )
 from google.cloud import firestore
+from src.core.extensions import limiter # Importa de extensions
 
 from . import chat_bp
 from src.core import vector_db 
@@ -27,6 +28,8 @@ from src.core.logger import get_logger
 logger = get_logger(__name__)
 
 COLLECTION_HISTORY = 'chat_history'
+
+# ... (Funções auxiliares mantidas, apenas imports mudaram) ...
 
 def _salvar_mensagem(user_email: str, role: str, content: str, conversation_id: str):
     """
@@ -70,6 +73,7 @@ def _carregar_historico(user_email: str, conversation_id: str, limite=20) -> lis
         return []
 
 @chat_bp.route('/')
+@limiter.limit("60 per minute") # Proteção F5 Spam
 def index():
     if 'user_profile' not in session: return redirect(url_for('auth_bp.login'))
     user_profile = session['user_profile']
@@ -92,6 +96,7 @@ def index():
 
 
 @chat_bp.route('/enviar', methods=['POST'])
+@limiter.limit("10 per minute") # Proteção de Custo (Spam de envio)
 def enviar_mensagem():
     if 'user_profile' not in session:
         return jsonify({'error': 'Sessão expirada.'}), 401

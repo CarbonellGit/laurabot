@@ -16,7 +16,7 @@ from flask import (
 
 from . import services as auth_services
 from . import auth_bp  
-from src.core.oauth import oauth
+from src.core.extensions import oauth # FIXED: Importa de extensions
 from src.core.database import db
 from .forms import CadastroAlunosForm
 

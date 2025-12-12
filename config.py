@@ -45,8 +45,14 @@ class Config:
 
     PINECONE_INDEX_NAME = 'laurabot-comunicados'
 
-    # === FLASK ===
+    # === FLASK & SEGURANÇA ===
     DEBUG = os.environ.get('FLASK_DEBUG', 'False').lower() in ('true', '1')
+    
+    # Hardening de Sessão
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    # Em produção (DEBUG=False), exige HTTPS. Localmente permite HTTP.
+    SESSION_COOKIE_SECURE = not DEBUG 
 
     # === OAUTH (LOGIN) ===
     GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
