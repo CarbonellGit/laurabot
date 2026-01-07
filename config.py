@@ -11,8 +11,9 @@ from dotenv import load_dotenv
 # Carrega variáveis do arquivo .env
 load_dotenv()
 
-# Em produção (Cloud Run/App Engine), OAUTHLIB_INSECURE_TRANSPORT deve ser removido ou tratado.
-# Mantemos aqui apenas se estivermos localmente, mas é bom ter atenção.
+# === CORREÇÃO PARA LOGIN GOOGLE LOCALHOST ===
+# O Authlib/Google exige HTTPS por padrão. Isso permite HTTP apenas se estivermos em DEBUG.
+# Em produção (Cloud Run), isso é ignorado automaticamente.
 if os.environ.get('FLASK_DEBUG') == '1':
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
@@ -43,15 +44,19 @@ class Config:
     if not GOOGLE_API_KEY:
         print("AVISO: 'GOOGLE_API_KEY' ausente. O Chatbot não funcionará.")
 
-    PINECONE_INDEX_NAME = 'laurabot-comunicados'
+    PINECONE_INDEX_NAME = os.environ.get('PINECONE_INDEX_NAME', 'laurabot-comunicados')
 
     # === FLASK & SEGURANÇA ===
+    # Detecta ambiente: Se FLASK_DEBUG for '1' ou 'True', estamos em DEV.
     DEBUG = os.environ.get('FLASK_DEBUG', 'False').lower() in ('true', '1')
     
     # Hardening de Sessão
     SESSION_COOKIE_HTTPONLY = True
-    SESSION_COOKIE_SAMESITE = 'Lax'
-    # Em produção (DEBUG=False), exige HTTPS. Localmente permite HTTP.
+    SESSION_COOKIE_SAMESITE = 'Lax' # Necessário para o redirect do Google funcionar bem
+    
+    # A MÁGICA DO LOGIN: 
+    # Em Produção (False) -> Exige HTTPS (True)
+    # Em Localhost (True) -> Permite HTTP (False)
     SESSION_COOKIE_SECURE = not DEBUG 
 
     # === OAUTH (LOGIN) ===
